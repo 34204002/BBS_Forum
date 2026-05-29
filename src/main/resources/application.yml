@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: BBS_forum
+  profiles:
+    active: dev
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+jwt:
+  secret: bbs-forum-secret-key-must-be-at-least-256-bits-long-for-hs256
+  expiration: 604800000
+
+upload:
+  path: ./uploads
+
+server:
+  port: 8080
