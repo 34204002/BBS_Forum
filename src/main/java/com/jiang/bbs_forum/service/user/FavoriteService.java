@@ -1,8 +1,8 @@
 package com.jiang.bbs_forum.service.user;
 
-import com.jiang.bbs_forum.common.ApiResponse;
+import com.jiang.bbs_forum.common.Response;
 
 public interface FavoriteService {
-    ApiResponse<?> favorite(int userId, int postId);
-    ApiResponse<?> unfavorite(int userId, int postId);
+    Response<?> favorite(int userId, int postId);
+    Response<?> unfavorite(int userId, int postId);
 }

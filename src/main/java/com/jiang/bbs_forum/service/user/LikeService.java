@@ -1,8 +1,8 @@
 package com.jiang.bbs_forum.service.user;
 
-import com.jiang.bbs_forum.common.ApiResponse;
+import com.jiang.bbs_forum.common.Response;
 
 public interface LikeService {
-    ApiResponse<?> like(int userId, int targetType, int targetId);
-    ApiResponse<?> unlike(int userId, int targetType, int targetId);
+    Response<?> like(int userId, int targetType, int targetId);
+    Response<?> unlike(int userId, int targetType, int targetId);
 }

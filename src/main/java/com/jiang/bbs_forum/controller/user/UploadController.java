@@ -1,6 +1,6 @@
 package com.jiang.bbs_forum.controller.user;
 
-import com.jiang.bbs_forum.common.ApiResponse;
+import com.jiang.bbs_forum.common.Response;
 import com.jiang.bbs_forum.service.user.FileUploadService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -15,13 +15,13 @@ public class UploadController {
 
     // POST /api/upload/avatar — 上传头像（≤2MB, jpg/png/gif）
     @PostMapping("/avatar")
-    public ApiResponse<?> uploadAvatar(@RequestParam("file") MultipartFile file) {
+    public Response<?> uploadAvatar(@RequestParam("file") MultipartFile file) {
         return fileUploadService.uploadAvatar(file);
     }
 
     // POST /api/upload/post — 上传帖子图片（≤5MB, jpg/png/gif）
     @PostMapping("/post")
-    public ApiResponse<?> uploadPostImage(@RequestParam("file") MultipartFile file) {
+    public Response<?> uploadPostImage(@RequestParam("file") MultipartFile file) {
         return fileUploadService.uploadPostImage(file);
     }
 }

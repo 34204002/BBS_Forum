@@ -1,8 +1,8 @@
 package com.jiang.bbs_forum.service.user;
 
-import com.jiang.bbs_forum.common.ApiResponse;
+import com.jiang.bbs_forum.common.Response;
 
 public interface BoardService {
-    ApiResponse<?> listBoards();
-    ApiResponse<?> getBoardById(int id);
+    Response<?> listBoards();
+    Response<?> getBoardById(int id);
 }

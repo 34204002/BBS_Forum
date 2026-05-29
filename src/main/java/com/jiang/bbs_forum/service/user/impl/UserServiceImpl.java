@@ -1,6 +1,6 @@
 package com.jiang.bbs_forum.service.user.impl;
 
-import com.jiang.bbs_forum.common.ApiResponse;
+import com.jiang.bbs_forum.common.Response;
 import com.jiang.bbs_forum.dto.request.ChangePasswordRequest;
 import com.jiang.bbs_forum.dto.request.UpdateProfileRequest;
 import com.jiang.bbs_forum.mapper.*;
@@ -28,56 +28,56 @@ public class UserServiceImpl implements UserService {
     private PasswordEncoder passwordEncoder;
 
     @Override
-    public ApiResponse<?> getCurrentUser(int userId) {
+    public Response<?> getCurrentUser(int userId) {
         // TODO: 查询user和user_profile，返回完整个人信息
         return null;
     }
 
     @Override
-    public ApiResponse<?> getUserById(int id) {
+    public Response<?> getUserById(int id) {
         // TODO: 查询用户公开信息（昵称、头像、积分、签名等），不返回敏感字段
         return null;
     }
 
     @Override
-    public ApiResponse<?> updateProfile(int userId, UpdateProfileRequest request) {
+    public Response<?> updateProfile(int userId, UpdateProfileRequest request) {
         // TODO: 更新user_profile表
         return null;
     }
 
     @Override
-    public ApiResponse<?> changePassword(int userId, ChangePasswordRequest request) {
+    public Response<?> changePassword(int userId, ChangePasswordRequest request) {
         // TODO: 1. 校验原密码
         // TODO: 2. BCrypt加密新密码并更新
         return null;
     }
 
     @Override
-    public ApiResponse<?> getPointRecords(int userId, int page, int size) {
+    public Response<?> getPointRecords(int userId, int page, int size) {
         // TODO: 分页查询point_records表，按创建时间倒序
         return null;
     }
 
     @Override
-    public ApiResponse<?> getPointsRank(int size) {
+    public Response<?> getPointsRank(int size) {
         // TODO: 按积分降序查询用户表，取前N名
         return null;
     }
 
     @Override
-    public ApiResponse<?> getMyPosts(int userId, int page, int size) {
+    public Response<?> getMyPosts(int userId, int page, int size) {
         // TODO: 分页查询当前用户的帖子
         return null;
     }
 
     @Override
-    public ApiResponse<?> getMyComments(int userId, int page, int size) {
+    public Response<?> getMyComments(int userId, int page, int size) {
         // TODO: 分页查询当前用户的回复（含帖子标题）
         return null;
     }
 
     @Override
-    public ApiResponse<?> getMyFavorites(int userId, int page, int size) {
+    public Response<?> getMyFavorites(int userId, int page, int size) {
         // TODO: 分页查询当前用户的收藏（关联帖子表）
         return null;
     }
