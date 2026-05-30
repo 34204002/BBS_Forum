@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帖子详情</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="nav">
+    <a href="index.html" class="brand">南昌大学BBS</a>
+    <div class="links">
+        <a href="index.html">首页</a>
+        <a href="create.html" id="nav-create" style="display:none">发帖</a>
+        <a href="profile.html" id="nav-profile" style="display:none">个人中心</a>
+        <span class="user-info">
+            <span id="nav-user"></span>
+            <a href="login.html"><button id="btn-logout" style="display:none">退出</button></a>
+            <a href="login.html" id="btn-gologin">登录</a>
+        </span>
+    </div>
+</div>
+
+<div class="container">
+    <div id="post-detail"></div>
+    <div class="card" id="comment-form" style="display:none">
+        <h3>发表回复</h3>
+        <div class="form-group">
+            <textarea id="comment-content" rows="3" placeholder="写下你的回复..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitComment(null)">发布回复</button>
+        <input type="hidden" id="reply-parent-id">
+    </div>
+    <h3 style="margin:20px 0 12px">回复列表</h3>
+    <div id="comment-list"></div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+const urlParams = new URLSearchParams(location.search);
+const postId = urlParams.get('id');
+
+function updateNav() {
+    if (isLoggedIn()) {
+        document.getElementById('nav-create').style.display = '';
+        document.getElementById('nav-profile').style.display = '';
+        document.getElementById('btn-logout').style.display = '';
+        document.getElementById('btn-gologin').style.display = 'none';
+        document.getElementById('comment-form').style.display = '';
+        document.getElementById('nav-user').textContent = getUser()?.nickname || getUser()?.username || '';
+    }
+}
+
+async function loadPost() {
+    try {
+        const res = await $.get(`/posts/${postId}`);
+        const p = res.data;
+        document.title = p.title;
+        document.getElementById('post-detail').innerHTML = `
+            <div class="card">
+                <h2>${p.title} ${p.isTop ? '<span class="tag tag-top">置顶</span>' : ''} ${p.isEssence ? '<span class="tag tag-essence">精华</span>' : ''}</h2>
+                <div class="meta" style="margin:12px 0">
+                    <span>板块: ${p.boardName}</span>
+                    <span>作者: ${p.nickname || p.username}</span>
+                    <span>👁 ${p.viewCount}</span>
+                    <span>❤ ${p.likeCount}</span>
+                    <span>💬 ${p.commentCount}</span>
+                    <span>${p.createTime}</span>
+                </div>
+                <div style="line-height:1.8;margin-top:16px">${p.content || ''}</div>
+                <div style="margin-top:16px">
+                    ${isLoggedIn() ? `<button class="btn btn-sm btn-outline" onclick="doLike()">❤ 点赞</button>
+                    <button class="btn btn-sm btn-outline" onclick="doFavorite()">⭐ 收藏</button>` : ''}
+                    ${getUser() && (getUser().id === p.userId || getUser().role === 'admin') ?
+                        `<a href="create.html?id=${p.id}" class="btn btn-sm btn-outline">编辑</a>
+                         <button class="btn btn-sm btn-danger" onclick="doDeletePost()">删除</button>` : ''}
+                </div>
+            </div>`;
+    } catch (e) { alert('帖子不存在'); location.href = 'index.html'; }
+}
+
+async function loadComments() {
+    try {
+        const res = await $.get(`/posts/${postId}/comments?page=1&size=100`);
+        const list = res.data.list || [];
+        document.getElementById('comment-list').innerHTML = list.map(c => renderComment(c)).join('');
+    } catch (e) { console.error(e); }
+}
+
+function renderComment(c) {
+    let html = `<div class="comment">
+        <div class="author"><strong>${c.nickname || c.username}</strong> ${c.createTime}</div>
+        <div class="content">${c.content}</div>
+        <div class="actions">
+            ${isLoggedIn() ? `<a onclick="doLikeComment(${c.id})">❤ ${c.likeCount || 0}</a>` : ''}
+            <a onclick="replyTo(${c.id}, '${(c.nickname||c.username)}')">回复</a>
+        </div>`;
+    if (c.children && c.children.length) {
+        html += `<div class="children">${c.children.map(renderComment).join('')}</div>`;
+    }
+    html += '</div>';
+    return html;
+}
+
+function replyTo(parentId, name) {
+    document.getElementById('reply-parent-id').value = parentId;
+    document.getElementById('comment-content').placeholder = `回复 ${name}...`;
+    document.getElementById('comment-content').focus();
+}
+
+async function submitComment() {
+    try {
+        const content = document.getElementById('comment-content').value.trim();
+        if (!content) return;
+        const parentId = document.getElementById('reply-parent-id').value || null;
+        await $.post('/comments', { postId: parseInt(postId), content, parentId: parentId ? parseInt(parentId) : null });
+        document.getElementById('comment-content').value = '';
+        document.getElementById('reply-parent-id').value = '';
+        loadComments();
+    } catch (e) { alert(e.message); }
+}
+
+async function doLike() { try { await $.post('/likes', { targetType: 1, targetId: parseInt(postId) }); loadPost(); } catch(e) { alert(e.message); } }
+async function doLikeComment(cid) { try { await $.post('/likes', { targetType: 2, targetId: cid }); loadComments(); } catch(e) { alert(e.message); } }
+async function doFavorite() { try { await $.post('/favorites', { postId: parseInt(postId) }); alert('已收藏'); } catch(e) { alert(e.message); } }
+async function doDeletePost() {
+    if (!confirm('确认删除？')) return;
+    try { await $.del(`/posts/${postId}`); location.href = 'index.html'; } catch(e) { alert(e.message); }
+}
+
+updateNav();
+loadPost();
+loadComments();
+</script>
+</body>
+</html>

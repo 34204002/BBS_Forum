@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="nav">
+    <a href="index.html" class="brand">南昌大学BBS</a>
+    <div class="links">
+        <a href="index.html">首页</a>
+        <a href="create.html">发帖</a>
+        <span class="user-info">
+            <span id="nav-user"></span>
+            <a href="login.html"><button>退出</button></a>
+        </span>
+    </div>
+</div>
+
+<div class="container" style="max-width:800px;margin:20px auto">
+    <div class="card">
+        <h3>个人资料</h3>
+        <div class="form-group"><label>昵称</label><input id="p-nickname"></div>
+        <div class="form-group"><label>手机</label><input id="p-phone"></div>
+        <div class="form-group"><label>工作性质</label><input id="p-workNature"></div>
+        <div class="form-group"><label>工作地点</label><input id="p-workLocation"></div>
+        <div class="form-group"><label>个人签名</label><input id="p-signature"></div>
+        <button class="btn btn-primary" onclick="saveProfile()">保存</button>
+    </div>
+    <div class="card">
+        <h3>修改密码</h3>
+        <div class="form-group"><label>原密码</label><input id="old-pwd" type="password"></div>
+        <div class="form-group"><label>新密码</label><input id="new-pwd" type="password"></div>
+        <button class="btn btn-primary" onclick="changePassword()">修改密码</button>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+if (!isLoggedIn()) { location.href = 'login.html'; }
+
+async function init() {
+    document.getElementById('nav-user').textContent = getUser()?.nickname || getUser()?.username || '';
+    const res = await $.get('/users/current');
+    const u = res.data;
+    if (u.profile) {
+        document.getElementById('p-nickname').value = u.profile.nickname || '';
+        document.getElementById('p-phone').value = u.profile.phone || '';
+        document.getElementById('p-workNature').value = u.profile.workNature || '';
+        document.getElementById('p-workLocation').value = u.profile.workLocation || '';
+        document.getElementById('p-signature').value = u.profile.signature || '';
+    }
+    document.querySelector('.card:nth-child(1) h3').textContent += ` - 积分: ${u.points} | 登录次数: ${u.loginCount || 0}`;
+}
+
+async function saveProfile() {
+    try {
+        await $.put('/users/profile', {
+            nickname: document.getElementById('p-nickname').value,
+            phone: document.getElementById('p-phone').value,
+            workNature: document.getElementById('p-workNature').value,
+            workLocation: document.getElementById('p-workLocation').value,
+            signature: document.getElementById('p-signature').value
+        });
+        alert('保存成功');
+    } catch (e) { alert(e.message); }
+}
+
+async function changePassword() {
+    try {
+        await $.put('/users/password', {
+            oldPassword: document.getElementById('old-pwd').value,
+            newPassword: document.getElementById('new-pwd').value
+        });
+        alert('密码修改成功');
+    } catch (e) { alert(e.message); }
+}
+
+init();
+</script>
+</body>
+</html>

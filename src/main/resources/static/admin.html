@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后台管理</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="nav">
+    <a href="index.html" class="brand">南昌大学BBS - 管理后台</a>
+    <div class="links"><a href="index.html">返回前台</a></div>
+</div>
+
+<div class="container" style="max-width:1000px;margin:20px auto">
+    <div class="card"><h3>用户管理</h3><div id="user-table"></div></div>
+    <div class="card"><h3>板块管理</h3>
+        <div class="form-group" style="display:flex;gap:10px;align-items:flex-end">
+            <div style="flex:1"><label>名称</label><input id="b-name"></div>
+            <div style="flex:2"><label>描述</label><input id="b-desc"></div>
+            <div style="width:80px"><label>排序</label><input id="b-sort" type="number" value="1"></div>
+            <button class="btn btn-primary" onclick="addBoard()">新增</button>
+        </div>
+        <div id="board-table"></div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+if (!isLoggedIn() || !isAdmin()) { alert('需要管理员权限'); location.href = 'index.html'; }
+
+async function loadUsers() {
+    const res = await $.get('/admin/users?size=50');
+    const users = res.data.list || [];
+    document.getElementById('user-table').innerHTML = `
+        <table><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>积分</th><th>操作</th></tr>
+            ${users.map(u => `<tr>
+                <td>${u.id}</td><td>${u.username}</td><td>${u.email}</td><td>${u.role}</td>
+                <td>${u.status === 1 ? '✅正常' : '🚫禁用'}</td><td>${u.points}</td>
+                <td><button class="btn btn-sm ${u.status===1?'btn-danger':'btn-primary'}" onclick="toggleUser(${u.id}, ${u.status})">
+                    ${u.status === 1 ? '禁用' : '启用'}</button></td>
+            </tr>`).join('')}</table>`;
+}
+
+async function loadBoards() {
+    const res = await $.get('/boards');
+    const boards = res.data || [];
+    document.getElementById('board-table').innerHTML = `
+        <table><tr><th>ID</th><th>名称</th><th>描述</th><th>排序</th><th>帖子数</th><th>操作</th></tr>
+            ${boards.map(b => `<tr>
+                <td>${b.id}</td><td>${b.name}</td><td>${b.description || ''}</td>
+                <td>${b.sort}</td><td>${b.postCount}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="deleteBoard(${b.id})">删除</button></td>
+            </tr>`).join('')}</table>`;
+}
+
+async function toggleUser(id, curStatus) {
+    try { await $.put(`/admin/users/${id}/status`, { status: curStatus === 1 ? 0 : 1 }); loadUsers(); } catch(e) { alert(e.message); }
+}
+
+async function addBoard() {
+    try {
+        await $.post('/admin/boards', {
+            name: document.getElementById('b-name').value,
+            description: document.getElementById('b-desc').value,
+            sort: parseInt(document.getElementById('b-sort').value)
+        });
+        document.getElementById('b-name').value = ''; document.getElementById('b-desc').value = ''; loadBoards();
+    } catch(e) { alert(e.message); }
+}
+
+async function deleteBoard(id) {
+    if (!confirm('确认删除？')) return;
+    try { await $.del(`/admin/boards/${id}`); loadBoards(); } catch(e) { alert(e.message); }
+}
+
+loadUsers();
+loadBoards();
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+/* 顶部导航 */
+.nav { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+.nav a { text-decoration: none; color: #333; }
+.nav .brand { font-size: 18px; font-weight: 700; color: #1890ff; }
+.nav .links { display: flex; gap: 20px; align-items: center; }
+.nav .links a { font-size: 14px; }
+.nav .links a:hover { color: #1890ff; }
+.nav .user-info { font-size: 13px; color: #666; display: flex; align-items: center; gap: 10px; }
+.nav .user-info button { background: none; border: 1px solid #ddd; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.nav .user-info button:hover { border-color: #ff4d4f; color: #ff4d4f; }
+
+/* 卡片 */
+.card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 16px; }
+.card h3 { margin-bottom: 12px; font-size: 16px; }
+
+/* 按钮 */
+.btn { display: inline-block; padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; transition: all .2s; text-decoration: none; color: #fff; }
+.btn-primary { background: #1890ff; }
+.btn-primary:hover { background: #40a9ff; }
+.btn-danger { background: #ff4d4f; }
+.btn-danger:hover { background: #ff7875; }
+.btn-sm { padding: 4px 12px; font-size: 12px; }
+.btn-outline { background: #fff; color: #1890ff; border: 1px solid #1890ff; }
+
+/* 表单 */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 4px; font-size: 14px; color: #555; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; }
+.form-group input:focus, .form-group textarea:focus { border-color: #1890ff; }
+textarea { min-height: 120px; resize: vertical; }
+
+/* 表格 */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+th { background: #fafafa; font-weight: 600; color: #555; }
+tr:hover { background: #fafafa; }
+
+/* 板块列表 */
+.board-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.board-tag { padding: 6px 16px; border-radius: 20px; border: 1px solid #e0e0e0; cursor: pointer; font-size: 13px; background: #fff; transition: all .2s; }
+.board-tag:hover, .board-tag.active { background: #1890ff; color: #fff; border-color: #1890ff; }
+
+/* 帖子列表 */
+.post-item { padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 12px; cursor: pointer; }
+.post-item:hover { background: #fafafa; }
+.post-item .meta { font-size: 12px; color: #999; margin-top: 6px; }
+.post-item .meta span { margin-right: 12px; }
+.post-item .tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
+.tag-top { background: #ff4d4f; color: #fff; }
+.tag-essence { background: #faad14; color: #fff; }
+.tag-demand { background: #1890ff; color: #fff; }
+
+/* 分页 */
+.pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+.pagination button { padding: 6px 14px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
+.pagination button.active { background: #1890ff; color: #fff; border-color: #1890ff; }
+.pagination button:disabled { opacity: 0.5; cursor: default; }
+
+/* 回复 */
+.comment { padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+.comment .author { font-size: 12px; color: #999; margin-bottom: 4px; }
+.comment .author strong { color: #333; margin-right: 8px; }
+.comment .content { font-size: 14px; line-height: 1.6; }
+.comment .actions { font-size: 12px; color: #999; margin-top: 6px; }
+.comment .actions a { margin-right: 12px; cursor: pointer; }
+.comment .children { margin-left: 30px; padding-left: 12px; border-left: 2px solid #f0f0f0; }
+
+/* 弹窗 */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100; }
+.modal.open { display: flex; }
+.modal-content { background: #fff; border-radius: 12px; padding: 30px; width: 90%; max-width: 480px; }
+.modal-content h2 { margin-bottom: 20px; }
+
+/* 登录页 */
+.login-page { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea, #764ba2); }
+.login-box { background: #fff; border-radius: 12px; padding: 40px; width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+.login-box h1 { text-align: center; margin-bottom: 30px; font-size: 24px; color: #333; }
+.tabs { display: flex; margin-bottom: 24px; border-bottom: 2px solid #f0f0f0; }
+.tabs span { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 15px; color: #999; }
+.tabs span.active { color: #1890ff; border-bottom: 2px solid #1890ff; margin-bottom: -2px; }
+
+/* 提示 */
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 200; animation: fadeIn 0.3s; }
+.toast-success { background: #52c41a; }
+.toast-error { background: #ff4d4f; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .container { padding: 10px; }
+    .nav { padding: 0 10px; }
+    .nav .links { gap: 10px; }
+    .login-box { width: 90%; padding: 24px; }
+    .comment .children { margin-left: 16px; }
+}
