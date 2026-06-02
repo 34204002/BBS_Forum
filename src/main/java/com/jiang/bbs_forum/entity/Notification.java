@@ -6,20 +6,30 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("comments")
-public class Comment {
+@TableName("notification")
+public class Notification {
+
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
+
     private Integer userId;
-    private Integer postId;
-    private Integer parentId;
+
+    private Integer fromUserId;
+
+    private Integer type;
+
+    private Integer targetType;
+
+    private Integer targetId;
+
     private String content;
-    private Integer likeCount;
-    private String atUsernames;
+
+    private Integer isRead;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-    @TableLogic
-    private Integer isDeleted;
+
 }

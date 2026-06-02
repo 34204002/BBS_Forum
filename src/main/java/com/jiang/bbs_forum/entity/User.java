@@ -18,6 +18,8 @@ public class User {
     private Integer points;
     private LocalDateTime lastLoginTime;
     private Integer loginCount;
+    private String avatar;
+    private String nickname;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

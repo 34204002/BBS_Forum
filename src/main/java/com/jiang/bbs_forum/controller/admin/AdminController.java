@@ -10,6 +10,8 @@ import com.jiang.bbs_forum.dto.response.LogVO;
 import com.jiang.bbs_forum.dto.response.StatusVO;
 import com.jiang.bbs_forum.dto.response.UserVO;
 import com.jiang.bbs_forum.service.admin.AdminService;
+import com.jiang.bbs_forum.service.user.BoardService;
+import com.jiang.bbs_forum.service.user.PostService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,10 @@ public class AdminController {
 
     @Autowired
     private AdminService adminService;
+    @Autowired
+    private PostService postService;
+    @Autowired
+    private BoardService boardService;
 
     // ==================== 用户管理 ====================
 
@@ -58,7 +64,7 @@ public class AdminController {
                                          @RequestAttribute("userId") int adminId,
                                          HttpServletRequest httpRequest) {
         log.info("POST /api/admin/boards - 新增板块, adminId={}", adminId);
-        return adminService.createBoard(request, adminId, httpRequest.getRemoteAddr());
+        return boardService.createBoard(request, adminId, httpRequest.getRemoteAddr());
     }
 
     /**
@@ -70,7 +76,7 @@ public class AdminController {
                                          @RequestAttribute("userId") int adminId,
                                          HttpServletRequest httpRequest) {
         log.info("PUT /api/admin/boards/{} - 修改板块, adminId={}", boardId, adminId);
-        return adminService.updateBoard(boardId, request, adminId, httpRequest.getRemoteAddr());
+        return boardService.updateBoard(boardId, request, adminId, httpRequest.getRemoteAddr());
     }
 
     /**
@@ -81,7 +87,7 @@ public class AdminController {
                                       @RequestAttribute("userId") int adminId,
                                       HttpServletRequest httpRequest) {
         log.info("DELETE /api/admin/boards/{} - 删除板块, adminId={}", boardId, adminId);
-        return adminService.deleteBoard(boardId, adminId, httpRequest.getRemoteAddr());
+        return boardService.deleteBoard(boardId, adminId, httpRequest.getRemoteAddr());
     }
 
     // ==================== 帖子管理 ====================
@@ -93,7 +99,7 @@ public class AdminController {
     public Response<StatusVO> toggleTop(@PathVariable("id") int postId,
                                         @RequestBody TopRequest request) {
         log.info("PUT /api/admin/posts/{}/top - 帖子置顶/取消置顶, isTop={}", postId, request.getIsTop());
-        return adminService.toggleTop(postId, request.getIsTop());
+        return postService.toggleTop(postId, request.getIsTop());
     }
 
     /**
@@ -103,7 +109,7 @@ public class AdminController {
     public Response<StatusVO> toggleEssence(@PathVariable("id") int postId,
                                             @RequestBody EssenceRequest request) {
         log.info("PUT /api/admin/posts/{}/essence - 帖子加精/取消, isEssence={}", postId, request.getIsEssence());
-        return adminService.toggleEssence(postId, request.getIsEssence());
+        return postService.toggleEssence(postId, request.getIsEssence());
     }
 
     // ==================== 系统日志 ====================

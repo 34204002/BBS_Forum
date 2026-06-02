@@ -7,7 +7,7 @@ import com.jiang.bbs_forum.common.Response;
 import com.jiang.bbs_forum.dto.request.ChangePasswordRequest;
 import com.jiang.bbs_forum.dto.request.UpdateProfileRequest;
 import com.jiang.bbs_forum.dto.response.*;
-import com.jiang.bbs_forum.service.user.UserService;
+import com.jiang.bbs_forum.service.user.*;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +21,16 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+    @Autowired
+    private PostService postService;
+    @Autowired
+    private CommentService commentService;
+    @Autowired
+    private FavoriteService favoriteService;
+    @Autowired
+    private LikeService likeService;
+    @Autowired
+    private PointService pointService;
 
     /**
      * 获取当前登录用户完整信息
@@ -69,7 +79,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         log.info("GET /api/users/points - 获取积分记录, userId={}", userId);
-        return userService.getPointRecords(userId, page, size);
+        return pointService.getPointRecords(userId, page, size);
     }
 
     /**
@@ -78,7 +88,7 @@ public class UserController {
     @GetMapping("/points/rank")
     public Response<List<RankItemVO>> getPointsRank(@RequestParam(defaultValue = "10") int size) {
         log.info("GET /api/users/points/rank - 积分排行榜");
-        return userService.getPointsRank(size);
+        return pointService.getPointsRank(size);
     }
 
     /**
@@ -90,7 +100,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         log.info("GET /api/users/posts - 我的帖子, userId={}", userId);
-        return userService.getMyPosts(userId, page, size);
+        return postService.listPostsByUser(userId, page, size);
     }
 
     /**
@@ -102,7 +112,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         log.info("GET /api/users/comments - 我的回复, userId={}", userId);
-        return userService.getMyComments(userId, page, size);
+        return commentService.listCommentsByUser(userId, page, size);
     }
 
     /**
@@ -114,6 +124,18 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         log.info("GET /api/users/favorites - 我的收藏, userId={}", userId);
-        return userService.getMyFavorites(userId, page, size);
+        return favoriteService.listFavorites(userId, page, size);
+    }
+
+    /**
+     * 获取我的点赞（分页）
+     */
+    @GetMapping("/likes")
+    public Response<PageResponse<PostVO>> getMyLikes(
+            @RequestAttribute("userId") int userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        log.info("GET /api/users/likes - 我的点赞, userId={}", userId);
+        return likeService.listLikedPosts(userId, page, size);
     }
 }

@@ -7,7 +7,9 @@ import com.jiang.bbs_forum.dto.request.UpdateCommentRequest;
 import com.jiang.bbs_forum.dto.response.CommentVO;
 
 public interface CommentService {
-    Response<PageResponse<CommentVO>> listComments(int postId, int page, int size);
+    Response<PageResponse<CommentVO>> listComments(Integer userId, int postId, int page, int size);
+
+    Response<PageResponse<CommentVO>> listCommentsByUser(int userId, int page, int size);
 
     Response<CommentVO> createComment(int userId, CreateCommentRequest request);
 

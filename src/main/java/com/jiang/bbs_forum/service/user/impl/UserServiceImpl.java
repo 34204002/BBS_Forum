@@ -1,21 +1,20 @@
 package com.jiang.bbs_forum.service.user.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.jiang.bbs_forum.common.PageResponse;
 import com.jiang.bbs_forum.common.Response;
 import com.jiang.bbs_forum.dto.request.ChangePasswordRequest;
 import com.jiang.bbs_forum.dto.request.UpdateProfileRequest;
 import com.jiang.bbs_forum.dto.response.*;
 import com.jiang.bbs_forum.entity.User;
 import com.jiang.bbs_forum.entity.UserProfile;
-import com.jiang.bbs_forum.mapper.*;
+import com.jiang.bbs_forum.mapper.UserMapper;
+import com.jiang.bbs_forum.mapper.UserProfileMapper;
 import com.jiang.bbs_forum.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -27,17 +26,7 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserProfileMapper userProfileMapper;
     @Autowired
-    private PostMapper postMapper;
-    @Autowired
-    private CommentMapper commentMapper;
-    @Autowired
-    private FavoriteMapper favoriteMapper;
-    @Autowired
-    private PointRecordMapper pointRecordMapper;
-    @Autowired
     private PasswordEncoder passwordEncoder;
-
-    // ==================== A模块：资料相关 ====================
 
     @Override
     public Response<UserVO> getCurrentUser(int userId) {
@@ -93,7 +82,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Response<ProfileVO> updateProfile(int userId, UpdateProfileRequest request) {
-        // 查现有 profile，不存在则创建
         UserProfile profile = userProfileMapper.selectOne(
                 new LambdaQueryWrapper<UserProfile>().eq(UserProfile::getUserId, userId));
         if (profile == null) {
@@ -133,40 +121,6 @@ public class UserServiceImpl implements UserService {
 
         return Response.success("密码修改成功", null);
     }
-
-    // ==================== D模块：积分收藏相关（TODO） ====================
-
-    @Override
-    public Response<PageResponse<PointRecordVO>> getPointRecords(int userId, int page, int size) {
-        // TODO: 分页查询 point_records 表，按时间倒序
-        return null;
-    }
-
-    @Override
-    public Response<List<RankItemVO>> getPointsRank(int size) {
-        // TODO: 按积分降序取前N名
-        return null;
-    }
-
-    @Override
-    public Response<PageResponse<PostVO>> getMyPosts(int userId, int page, int size) {
-        // TODO: 分页查询我的帖子
-        return null;
-    }
-
-    @Override
-    public Response<PageResponse<CommentVO>> getMyComments(int userId, int page, int size) {
-        // TODO: 分页查询我的回复
-        return null;
-    }
-
-    @Override
-    public Response<PageResponse<PostVO>> getMyFavorites(int userId, int page, int size) {
-        // TODO: 分页查询我的收藏
-        return null;
-    }
-
-    // ==================== 工具方法 ====================
 
     private ProfileVO buildProfile(UserProfile p) {
         if (p == null) return null;

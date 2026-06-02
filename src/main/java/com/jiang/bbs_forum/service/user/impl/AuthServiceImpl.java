@@ -60,6 +60,8 @@ public class AuthServiceImpl implements AuthService {
         user.setRole("user");
         user.setStatus(1);
         user.setPoints(0);
+        user.setNickname(request.getUsername());
+        user.setAvatar("default.png");
         userMapper.insert(user);
 
         UserProfile profile = new UserProfile();
