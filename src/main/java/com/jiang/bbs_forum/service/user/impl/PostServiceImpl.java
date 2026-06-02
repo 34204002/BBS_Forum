@@ -221,8 +221,10 @@ public class PostServiceImpl implements PostService {
         favoriteMapper.delete(new LambdaQueryWrapper<Favorite>()
                 .eq(Favorite::getPostId, postId));
 
-        post.setIsDeleted(1);
-        postMapper.updateById(post);
+        postMapper.update(null,
+                new UpdateWrapper<Post>()
+                        .eq("id", postId)
+                        .set("is_deleted", 1));
 
         Board board = boardMapper.selectById(post.getBoardId());
         if (board != null) {

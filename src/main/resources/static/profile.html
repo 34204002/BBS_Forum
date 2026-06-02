@@ -12,6 +12,7 @@
     <div class="links">
         <a href="index.html">首页</a>
         <a href="create.html">发帖</a>
+        <a href="profile.html">个人中心</a>
         <span class="user-info">
             <span id="nav-user"></span>
             <a href="login.html"><button>退出</button></a>
@@ -19,40 +20,91 @@
     </div>
 </div>
 
-<div class="container" style="max-width:800px;margin:20px auto">
-    <div class="card">
-        <h3>个人资料</h3>
-        <div class="form-group"><label>昵称</label><input id="p-nickname"></div>
-        <div class="form-group"><label>手机</label><input id="p-phone"></div>
-        <div class="form-group"><label>工作性质</label><input id="p-workNature"></div>
-        <div class="form-group"><label>工作地点</label><input id="p-workLocation"></div>
-        <div class="form-group"><label>个人签名</label><input id="p-signature"></div>
-        <button class="btn btn-primary" onclick="saveProfile()">保存</button>
+<div class="container" style="max-width:900px;margin:20px auto">
+    <div class="profile-header card">
+        <div style="display:flex;align-items:center;gap:16px">
+            <div class="avatar-lg" id="profile-avatar"></div>
+            <div>
+                <h2 id="profile-name"></h2>
+                <p style="color:#999;font-size:13px">积分: <b id="profile-points">0</b> | 登录次数: <b id="profile-logins">0</b></p>
+            </div>
+        </div>
     </div>
-    <div class="card">
-        <h3>修改密码</h3>
-        <div class="form-group"><label>原密码</label><input id="old-pwd" type="password"></div>
-        <div class="form-group"><label>新密码</label><input id="new-pwd" type="password"></div>
-        <button class="btn btn-primary" onclick="changePassword()">修改密码</button>
+
+    <div class="tabs" style="margin-bottom:16px">
+        <span class="tab active" onclick="switchTab('info')">个人资料</span>
+        <span class="tab" onclick="switchTab('posts')">我的帖子</span>
+        <span class="tab" onclick="switchTab('comments')">我的回复</span>
+        <span class="tab" onclick="switchTab('favorites')">我的收藏</span>
+        <span class="tab" onclick="switchTab('likes')">我的点赞</span>
+        <span class="tab" onclick="switchTab('points')">积分记录</span>
+        <span class="tab" onclick="switchTab('rank')">积分排行</span>
     </div>
+
+    <div id="tab-content"></div>
 </div>
 
 <script src="js/api.js"></script>
 <script>
 if (!isLoggedIn()) { location.href = 'login.html'; }
+let currentTab = 'info';
+document.getElementById('nav-user').textContent = getUser()?.nickname || getUser()?.username || '';
 
 async function init() {
-    document.getElementById('nav-user').textContent = getUser()?.nickname || getUser()?.username || '';
     const res = await $.get('/users/current');
     const u = res.data;
-    if (u.profile) {
-        document.getElementById('p-nickname').value = u.profile.nickname || '';
-        document.getElementById('p-phone').value = u.profile.phone || '';
-        document.getElementById('p-workNature').value = u.profile.workNature || '';
-        document.getElementById('p-workLocation').value = u.profile.workLocation || '';
-        document.getElementById('p-signature').value = u.profile.signature || '';
+    document.getElementById('profile-name').textContent = u.nickname || u.username;
+    document.getElementById('profile-points').textContent = u.points || 0;
+    document.getElementById('profile-logins').textContent = u.loginCount || 0;
+    document.getElementById('profile-avatar').textContent = (u.nickname || u.username)[0].toUpperCase();
+    switchTab('info');
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    const div = document.getElementById('tab-content');
+    switch (tab) {
+        case 'info': renderProfile(); break;
+        case 'posts': renderPosts(); break;
+        case 'comments': renderComments(); break;
+        case 'favorites': renderFavorites(); break;
+        case 'likes': renderLikes(); break;
+        case 'points': renderPoints(); break;
+        case 'rank': renderRank(); break;
     }
-    document.querySelector('.card:nth-child(1) h3').textContent += ` - 积分: ${u.points} | 登录次数: ${u.loginCount || 0}`;
+}
+
+// ---- 个人资料 ----
+async function renderProfile() {
+    try {
+        const res = await $.get('/users/current');
+        const u = res.data;
+        const p = u.profile || {};
+        document.getElementById('profile-name').textContent = u.nickname || u.username;
+        document.getElementById('profile-avatar').textContent = (u.nickname || u.username)[0].toUpperCase();
+        document.getElementById('profile-points').textContent = u.points || 0;
+        document.getElementById('profile-logins').textContent = u.loginCount || 0;
+        document.getElementById('tab-content').innerHTML = `
+            <div class="card"><h3>个人资料</h3>
+                <div class="form-group"><label>昵称</label><input id="p-nickname" value="${escHtml(p.nickname||'')}"></div>
+                <div class="form-group"><label>手机</label><input id="p-phone" value="${escHtml(p.phone||'')}"></div>
+                <div class="form-group"><label>工作性质</label><input id="p-workNature" value="${escHtml(p.workNature||'')}"></div>
+                <div class="form-group"><label>工作地点</label><input id="p-workLocation" value="${escHtml(p.workLocation||'')}"></div>
+                <div class="form-group"><label>个人签名</label><input id="p-signature" value="${escHtml(p.signature||'')}"></div>
+                <button class="btn btn-primary" onclick="saveProfile()">保存</button>
+            </div>
+            <div class="card"><h3>修改头像</h3>
+                <div class="form-group"><label>头像URL</label><input id="p-avatar-url" value="${escHtml(p.avatar||'')}" placeholder="输入头像图片URL"></div>
+                <button class="btn btn-primary" onclick="updateAvatar()">更新头像</button>
+            </div>
+            <div class="card"><h3>修改密码</h3>
+                <div class="form-group"><label>原密码</label><input id="old-pwd" type="password"></div>
+                <div class="form-group"><label>新密码</label><input id="new-pwd" type="password"></div>
+                <button class="btn btn-primary" onclick="changePassword()">修改密码</button>
+            </div>`;
+    } catch (e) { toast(e.message, 'error'); }
 }
 
 async function saveProfile() {
@@ -64,8 +116,19 @@ async function saveProfile() {
             workLocation: document.getElementById('p-workLocation').value,
             signature: document.getElementById('p-signature').value
         });
-        alert('保存成功');
-    } catch (e) { alert(e.message); }
+        toast('保存成功');
+        init();
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+async function updateAvatar() {
+    try {
+        const url = document.getElementById('p-avatar-url').value.trim();
+        if (!url) { toast('请输入头像URL', 'error'); return; }
+        await $.put(`/users/avatar?avatarUrl=${encodeURIComponent(url)}`);
+        toast('头像更新成功');
+        init();
+    } catch (e) { toast(e.message, 'error'); }
 }
 
 async function changePassword() {
@@ -74,8 +137,142 @@ async function changePassword() {
             oldPassword: document.getElementById('old-pwd').value,
             newPassword: document.getElementById('new-pwd').value
         });
-        alert('密码修改成功');
-    } catch (e) { alert(e.message); }
+        toast('密码修改成功');
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- 列表通用渲染 ----
+function renderPageList(res, mapFn, emptyText) {
+    const data = res.data;
+    const list = data.list || [];
+    if (list.length === 0) return `<p style="text-align:center;color:#999;padding:30px">${emptyText || '暂无数据'}</p>`;
+    return list.map(mapFn).join('') + renderPagination(data, 'current');
+}
+
+function renderPagination(data, prefix) {
+    if (!data.pages || data.pages <= 1) return '';
+    let html = '<div class="pagination">';
+    for (let i = 1; i <= data.pages; i++) {
+        html += `<button class="${i===data.page?'active':''}" onclick="goPage('${prefix}',${i})">${i}</button>`;
+    }
+    return html + '</div>';
+}
+
+let pageStates = {};
+function goPage(prefix, p) {
+    pageStates[prefix] = p;
+    switchTab(currentTab);
+}
+
+// ---- 我的帖子 ----
+async function renderPosts() {
+    const page = pageStates['posts'] || 1;
+    try {
+        const res = await $.get(`/users/posts?page=${page}&size=10`);
+        document.getElementById('tab-content').innerHTML = '<div class="card"><h3>我的帖子</h3>' +
+            renderPageList(res, p => `
+                <div class="list-item" onclick="location.href='post.html?id=${p.id}'">
+                    <div style="flex:1">
+                        <strong>${escHtml(p.title)}</strong>
+                        <div class="meta" style="margin-top:4px"><span>❤ ${p.likeCount||0}</span><span>💬 ${p.commentCount||0}</span><span>${p.createTime}</span></div>
+                    </div>
+                </div>`, '还没有发过帖子') + '</div>';
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- 我的回复 ----
+async function renderComments() {
+    const page = pageStates['comments'] || 1;
+    try {
+        const res = await $.get(`/users/comments?page=${page}&size=10`);
+        document.getElementById('tab-content').innerHTML = '<div class="card"><h3>我的回复</h3>' +
+            renderPageList(res, c => `
+                <div class="list-item" onclick="location.href='post.html?id=${c.postId}'">
+                    <div style="flex:1">
+                        <div style="font-size:14px">${escHtml(c.content).substring(0, 100)}</div>
+                        <div class="meta" style="margin-top:4px"><span>${c.createTime}</span></div>
+                    </div>
+                </div>`, '还没有回复过') + '</div>';
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- 我的收藏 ----
+async function renderFavorites() {
+    const page = pageStates['favorites'] || 1;
+    try {
+        const res = await $.get(`/users/favorites?page=${page}&size=10`);
+        document.getElementById('tab-content').innerHTML = '<div class="card"><h3>我的收藏</h3>' +
+            renderPageList(res, p => `
+                <div class="list-item">
+                    <div style="flex:1" onclick="location.href='post.html?id=${p.id}'">
+                        <strong>${escHtml(p.title)}</strong>
+                        <div class="meta" style="margin-top:4px"><span>❤ ${p.likeCount||0}</span><span>💬 ${p.commentCount||0}</span><span>${p.createTime}</span></div>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();unfavoritePost(${p.id})">取消收藏</button>
+                </div>`, '还没有收藏') + '</div>';
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+async function unfavoritePost(pid) {
+    try { await $.del(`/favorites/${pid}`); renderFavorites(); toast('已取消收藏'); } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- 我的点赞 ----
+async function renderLikes() {
+    const page = pageStates['likes'] || 1;
+    try {
+        const res = await $.get(`/users/likes?page=${page}&size=10`);
+        document.getElementById('tab-content').innerHTML = '<div class="card"><h3>我的点赞</h3>' +
+            renderPageList(res, p => `
+                <div class="list-item" onclick="location.href='post.html?id=${p.id}'">
+                    <div style="flex:1">
+                        <strong>${escHtml(p.title)}</strong>
+                        <div class="meta" style="margin-top:4px"><span>❤ ${p.likeCount||0}</span><span>💬 ${p.commentCount||0}</span><span>${p.createTime}</span></div>
+                    </div>
+                </div>`, '还没有点赞过') + '</div>';
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- 积分记录 ----
+async function renderPoints() {
+    const page = pageStates['points'] || 1;
+    try {
+        const res = await $.get(`/users/points?page=${page}&size=10`);
+        document.getElementById('tab-content').innerHTML = '<div class="card"><h3>积分记录</h3>' +
+            renderPageList(res, r => `
+                <div class="list-item">
+                    <div style="flex:1">
+                        <span class="tag ${r.type===1?'tag-essence':'tag-top'}">${r.type===1?'+'+r.points:r.points}</span>
+                        ${escHtml(r.reason)}
+                        <span style="float:right;color:#bbb;font-size:12px">余额:${r.balance} | ${r.createTime}</span>
+                    </div>
+                </div>`, '暂无积分记录') + '</div>';
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+// ---- 积分排行 ----
+async function renderRank() {
+    try {
+        const res = await $.get('/users/points/rank?size=50');
+        const list = res.data || [];
+        document.getElementById('tab-content').innerHTML = '<div class="card"><h3>积分排行 TOP50</h3>' +
+            (list.length === 0 ? '<p style="text-align:center;color:#999;padding:30px">暂无数据</p>' :
+            `<table><tr><th>排名</th><th>用户</th><th>积分</th></tr>
+            ${list.map(r => `<tr>
+                <td>${r.rank <= 3 ? ['🥇','🥈','🥉'][r.rank-1] : r.rank}</td>
+                <td><strong>${escHtml(r.nickname || r.username)}</strong></td>
+                <td>${r.points}</td>
+            </tr>`).join('')}</table>`) + '</div>';
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function toast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + (type || 'success');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
 }
 
 init();

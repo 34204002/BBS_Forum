@@ -14,4 +14,6 @@ public interface UserService {
     Response<ProfileVO> updateProfile(int userId, UpdateProfileRequest request);
 
     Response<Void> changePassword(int userId, ChangePasswordRequest request);
+
+    Response<Void> updateAvatar(int userId, String avatarUrl);
 }

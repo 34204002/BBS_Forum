@@ -71,6 +71,16 @@ public class UserController {
     }
 
     /**
+     * 修改头像
+     */
+    @PutMapping("/avatar")
+    public Response<Void> updateAvatar(@RequestAttribute("userId") int userId,
+                                       @RequestParam String avatarUrl) {
+        log.info("PUT /api/users/avatar - 修改头像, userId={}", userId);
+        return userService.updateAvatar(userId, avatarUrl);
+    }
+
+    /**
      * 获取我的积分记录（分页）
      */
     @GetMapping("/points")

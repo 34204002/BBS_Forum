@@ -122,6 +122,13 @@ public class UserServiceImpl implements UserService {
         return Response.success("密码修改成功", null);
     }
 
+    @Override
+    public Response<Void> updateAvatar(int userId, String avatarUrl) {
+        // TODO: 1. 更新 user 表的 avatar 字段
+        // TODO: 2. 同步更新 user_profile 表的 avatar 字段
+        return null;
+    }
+
     private ProfileVO buildProfile(UserProfile p) {
         if (p == null) return null;
         return ProfileVO.builder()
