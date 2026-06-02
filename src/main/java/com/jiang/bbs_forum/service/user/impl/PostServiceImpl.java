@@ -1,6 +1,7 @@
 package com.jiang.bbs_forum.service.user.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jiang.bbs_forum.common.PageResponse;
@@ -15,13 +16,19 @@ import com.jiang.bbs_forum.service.user.PointService;
 import com.jiang.bbs_forum.service.user.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
 @Service
 public class PostServiceImpl implements PostService {
+
+    private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
     private PostMapper postMapper;
@@ -36,28 +43,74 @@ public class PostServiceImpl implements PostService {
     @Autowired
     private BoardMapper boardMapper;
     @Autowired
+    private CommentMapper commentMapper;
+    @Autowired
     private CommentService commentService;
 
     @Override
     public Response<PageResponse<PostVO>> listPosts(Integer boardId, String keyword, int page, int size, String orderBy) {
-        // TODO: 多条件分页查询帖子
-        // TODO: 支持按板块、关键词筛选，支持排序（createTime/likeCount/commentCount）
-        return null;
+        LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Post::getIsDeleted, 0);
+
+        if (boardId != null) {
+            wrapper.eq(Post::getBoardId, boardId);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.like(Post::getTitle, keyword);
+        }
+
+        switch (orderBy) {
+            case "likeCount" -> wrapper.orderByDesc(Post::getLikeCount);
+            case "commentCount" -> wrapper.orderByDesc(Post::getCommentCount);
+            default -> wrapper.orderByDesc(Post::getCreateTime);
+        }
+
+        Page<Post> p = new Page<>(page, size);
+        IPage<Post> result = postMapper.selectPage(p, wrapper);
+
+        List<PostVO> list = buildPostVOList(result.getRecords(), null);
+        return Response.success(new PageResponse<>(result.getTotal(), list, page, size));
     }
 
     @Override
     public Response<List<PostVO>> getHotPosts(int size) {
-        // TODO: 热门帖子算法：
-        // TODO: 热度 = 浏览量*0.3 + 点赞数*0.3 + 评论数*0.4
-        // TODO: 取近7天内的帖子，按热度降序排列，取前N条
-        return null;
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+
+        List<Post> posts = postMapper.selectList(
+                new LambdaQueryWrapper<Post>()
+                        .eq(Post::getIsDeleted, 0)
+                        .ge(Post::getCreateTime, sevenDaysAgo)
+        );
+
+        List<Post> hotPosts = posts.stream()
+                .sorted(Comparator.comparingDouble((Post p) ->
+                        (p.getViewCount() == null ? 0 : p.getViewCount()) * 0.3
+                                + (p.getLikeCount() == null ? 0 : p.getLikeCount()) * 0.3
+                                + (p.getCommentCount() == null ? 0 : p.getCommentCount()) * 0.4
+                ).reversed())
+                .limit(size)
+                .toList();
+
+        List<PostVO> list = buildPostVOList(hotPosts, null);
+        return Response.success(list);
     }
 
     @Override
     public Response<PostVO> getPostById(int id) {
-        // TODO: 1. 查询帖子详情（关联板块名、用户信息）
-        // TODO: 2. 增加浏览量（view_count + 1）
-        return null;
+        Post post = postMapper.selectById(id);
+        if (post == null || post.getIsDeleted() == 1) {
+            return Response.error(404, "帖子不存在");
+        }
+
+        Post update = new Post();
+        update.setId(id);
+        update.setViewCount((post.getViewCount() == null ? 0 : post.getViewCount()) + 1);
+        postMapper.updateById(update);
+
+        post.setViewCount(update.getViewCount());
+        PostVO vo = buildPostVO(post, null);
+
+        return Response.success(vo);
     }
 
     @Override
@@ -67,47 +120,7 @@ public class PostServiceImpl implements PostService {
             return Response.error(404, "帖子不存在");
         }
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-        PostVO postVO = new PostVO();
-        postVO.setId(post.getId());
-        postVO.setTitle(post.getTitle());
-        postVO.setContent(post.getContent());
-        postVO.setLikeCount(post.getLikeCount());
-        postVO.setCommentCount(post.getCommentCount());
-        postVO.setCreateTime(post.getCreateTime() == null ? null : post.getCreateTime().format(formatter));
-        postVO.setUpdateTime(post.getUpdateTime() == null ? null : post.getUpdateTime().format(formatter));
-        postVO.setLiked(false);
-        postVO.setFavorited(false);
-
-        if (userId != null) {
-            postVO.setLiked(likeMapper.selectCount(
-                    new LambdaQueryWrapper<Like>()
-                            .eq(Like::getUserId, userId)
-                            .eq(Like::getTargetType, 1)
-                            .eq(Like::getTargetId, postId)
-            ) > 0);
-
-            postVO.setFavorited(favoriteMapper.selectCount(
-                    new LambdaQueryWrapper<Favorite>()
-                            .eq(Favorite::getUserId, userId)
-                            .eq(Favorite::getPostId, postId)
-            ) > 0);
-        }
-
-        if (post.getUserId() != null) {
-            User user = userMapper.selectById(post.getUserId());
-            postVO.setUserId(post.getUserId());
-            postVO.setUsername(user == null ? null : user.getUsername());
-            postVO.setNickname(user == null ? null : user.getNickname());
-            postVO.setAvatar(user == null ? null : user.getAvatar());
-        }
-
-        if (post.getBoardId() != null) {
-            Board board = boardMapper.selectById(post.getBoardId());
-            postVO.setBoardId(post.getBoardId());
-            postVO.setBoardName(board == null ? null : board.getName());
-        }
+        PostVO postVO = buildPostVO(post, userId);
 
         Response<PageResponse<CommentVO>> commentResp =
                 commentService.listComments(userId, postId, page, size);
@@ -120,36 +133,119 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Response<PostVO> createPost(int userId, CreatePostRequest request) {
-        // TODO: 1. 如果是需求帖(isDemand=1)，检查积分是否足够
-        // TODO: 2. 需求帖扣积分，记录消耗记录
-        // TODO: 3. 插入帖子
-        // TODO: 4. 更新板块post_count
-        // TODO: 5. 普通帖发帖奖励积分(+10)
-        return null;
+        User user = userMapper.selectById(userId);
+
+        int isDemand = request.getIsDemand() != null && request.getIsDemand() == 1 ? 1 : 0;
+        int rewardPoints = request.getRewardPoints() != null ? request.getRewardPoints() : 0;
+
+        if (isDemand == 1) {
+            if (rewardPoints <= 0) {
+                return Response.error(400, "需求帖必须设置悬赏积分");
+            }
+            if (user.getPoints() < rewardPoints) {
+                return Response.error(400, "积分不足");
+            }
+            pointService.consumePoints(userId, rewardPoints, "发布需求帖悬赏");
+        }
+
+        Post post = new Post();
+        post.setUserId(userId);
+        post.setBoardId(request.getBoardId());
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setIsDemand(isDemand);
+        post.setRewardPoints(rewardPoints);
+        post.setViewCount(0);
+        post.setLikeCount(0);
+        post.setCommentCount(0);
+        postMapper.insert(post);
+
+        Board board = boardMapper.selectById(request.getBoardId());
+        if (board != null) {
+            Board boardUpdate = new Board();
+            boardUpdate.setId(board.getId());
+            boardUpdate.setPostCount((board.getPostCount() == null ? 0 : board.getPostCount()) + 1);
+            boardMapper.updateById(boardUpdate);
+        }
+
+        if (isDemand == 0) {
+            pointService.addPoints(userId, 10, "发布普通帖奖励");
+        }
+
+        PostVO vo = buildPostVO(post, userId);
+        return Response.success("发帖成功", vo);
     }
 
     @Override
     public Response<PostVO> updatePost(int userId, int postId, UpdatePostRequest request) {
-        // TODO: 1. 校验帖子存在且未删除
-        // TODO: 2. 校验是否为帖子作者（非作者返回403）
-        // TODO: 3. 更新标题和内容
-        return null;
+        Post post = postMapper.selectById(postId);
+        if (post == null || post.getIsDeleted() == 1) {
+            return Response.error(404, "帖子不存在");
+        }
+        if (!post.getUserId().equals(userId)) {
+            return Response.error(403, "无权限修改");
+        }
+
+        if (request.getTitle() != null) post.setTitle(request.getTitle());
+        if (request.getContent() != null) post.setContent(request.getContent());
+        postMapper.updateById(post);
+
+        PostVO vo = buildPostVO(post, userId);
+        return Response.success("修改成功", vo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Response<Void> deletePost(int userId, int postId) {
+        Post post = postMapper.selectById(postId);
+        if (post == null || post.getIsDeleted() == 1) {
+            return Response.error(404, "帖子不存在");
+        }
+
+        User user = userMapper.selectById(userId);
+        if (!post.getUserId().equals(userId) && !"admin".equals(user.getRole())) {
+            return Response.error(403, "无权限删除");
+        }
+
+        commentMapper.update(null,
+                new UpdateWrapper<Comment>()
+                        .eq("post_id", postId)
+                        .set("is_deleted", 1));
+
+        likeMapper.delete(new LambdaQueryWrapper<Like>()
+                .eq(Like::getTargetType, 1)
+                .eq(Like::getTargetId, postId));
+
+        favoriteMapper.delete(new LambdaQueryWrapper<Favorite>()
+                .eq(Favorite::getPostId, postId));
+
+        post.setIsDeleted(1);
+        postMapper.updateById(post);
+
+        Board board = boardMapper.selectById(post.getBoardId());
+        if (board != null) {
+            Board boardUpdate = new Board();
+            boardUpdate.setId(board.getId());
+            boardUpdate.setPostCount(Math.max(0,
+                    (board.getPostCount() == null ? 0 : board.getPostCount()) - 1));
+            boardMapper.updateById(boardUpdate);
+        }
+
+        return Response.success("删除成功", null);
     }
 
     @Override
     public Response<PageResponse<PostVO>> listPostsByUser(int userId, int page, int size) {
         Page<Post> p = new Page<>(page, size);
 
-        IPage<Post> result = postMapper.selectPage(
-                p,
+        IPage<Post> result = postMapper.selectPage(p,
                 new LambdaQueryWrapper<Post>()
                         .eq(Post::getUserId, userId)
-                        .orderByDesc(Post::getCreateTime)
-        );
+                        .orderByDesc(Post::getCreateTime));
 
         List<Post> posts = result.getRecords();
-
         if (posts.isEmpty()) {
             return Response.success(new PageResponse<>(0L, List.of(), page, size));
         }
@@ -171,7 +267,6 @@ public class PostServiceImpl implements PostService {
                         .in(Favorite::getPostId, postIds)
         ).stream().map(o -> (Integer) o).collect(java.util.stream.Collectors.toSet());
 
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         List<PostVO> list = posts.stream().map(post -> {
             PostVO vo = new PostVO();
             vo.setId(post.getId());
@@ -181,7 +276,7 @@ public class PostServiceImpl implements PostService {
             vo.setCommentCount(post.getCommentCount());
             vo.setLiked(likedSet.contains(post.getId()));
             vo.setFavorited(favSet.contains(post.getId()));
-            vo.setCreateTime(post.getCreateTime() != null ? post.getCreateTime().format(dtf) : null);
+            vo.setCreateTime(post.getCreateTime() != null ? post.getCreateTime().format(DTF) : null);
             return vo;
         }).toList();
 
@@ -189,23 +284,94 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Response<Void> deletePost(int userId, int postId) {
-        // TODO: 1. 校验帖子存在
-        // TODO: 2. 校验是否为帖子作者或管理员
-        // TODO: 3. 逻辑删除（级联删除回复、点赞记录）
-        // TODO: 4. 更新板块post_count
-        return null;
-    }
-
-    @Override
     public Response<StatusVO> toggleTop(int postId, int isTop) {
-        // TODO: 更新帖子is_top字段
-        return null;
+        Post post = postMapper.selectById(postId);
+        if (post == null || post.getIsDeleted() == 1) {
+            return Response.error(404, "帖子不存在");
+        }
+
+        Post update = new Post();
+        update.setId(postId);
+        update.setIsTop(isTop);
+        postMapper.updateById(update);
+
+        StatusVO vo = StatusVO.builder()
+                .id(postId)
+                .isTop(isTop)
+                .updateTime(LocalDateTime.now().format(DTF))
+                .build();
+        return Response.success(vo);
     }
 
     @Override
     public Response<StatusVO> toggleEssence(int postId, int isEssence) {
-        // TODO: 更新帖子is_essence字段
-        return null;
+        Post post = postMapper.selectById(postId);
+        if (post == null || post.getIsDeleted() == 1) {
+            return Response.error(404, "帖子不存在");
+        }
+
+        Post update = new Post();
+        update.setId(postId);
+        update.setIsEssence(isEssence);
+        postMapper.updateById(update);
+
+        StatusVO vo = StatusVO.builder()
+                .id(postId)
+                .isEssence(isEssence)
+                .updateTime(LocalDateTime.now().format(DTF))
+                .build();
+        return Response.success(vo);
+    }
+
+    private PostVO buildPostVO(Post post, Integer userId) {
+        PostVO vo = new PostVO();
+        vo.setId(post.getId());
+        vo.setTitle(post.getTitle());
+        vo.setContent(post.getContent());
+        vo.setViewCount(post.getViewCount());
+        vo.setLikeCount(post.getLikeCount());
+        vo.setCommentCount(post.getCommentCount());
+        vo.setIsTop(post.getIsTop());
+        vo.setIsEssence(post.getIsEssence());
+        vo.setIsDemand(post.getIsDemand());
+        vo.setRewardPoints(post.getRewardPoints());
+        vo.setCreateTime(post.getCreateTime() != null ? post.getCreateTime().format(DTF) : null);
+        vo.setUpdateTime(post.getUpdateTime() != null ? post.getUpdateTime().format(DTF) : null);
+        vo.setLiked(false);
+        vo.setFavorited(false);
+
+        if (userId != null) {
+            vo.setLiked(likeMapper.selectCount(
+                    new LambdaQueryWrapper<Like>()
+                            .eq(Like::getUserId, userId)
+                            .eq(Like::getTargetType, 1)
+                            .eq(Like::getTargetId, post.getId())
+            ) > 0);
+            vo.setFavorited(favoriteMapper.selectCount(
+                    new LambdaQueryWrapper<Favorite>()
+                            .eq(Favorite::getUserId, userId)
+                            .eq(Favorite::getPostId, post.getId())
+            ) > 0);
+        }
+
+        if (post.getUserId() != null) {
+            User u = userMapper.selectById(post.getUserId());
+            vo.setUserId(post.getUserId());
+            vo.setUsername(u != null ? u.getUsername() : null);
+            vo.setNickname(u != null ? u.getNickname() : null);
+            vo.setAvatar(u != null ? u.getAvatar() : null);
+        }
+
+        if (post.getBoardId() != null) {
+            Board b = boardMapper.selectById(post.getBoardId());
+            vo.setBoardId(post.getBoardId());
+            vo.setBoardName(b != null ? b.getName() : null);
+        }
+
+        return vo;
+    }
+
+    private List<PostVO> buildPostVOList(List<Post> posts, Integer userId) {
+        return posts.stream().map(p -> buildPostVO(p, userId)).toList();
     }
 }
