@@ -25,5 +25,5 @@ const $ = {
     get: (path) => api('GET', path),
     post: (path, body) => api('POST', path, body),
     put: (path, body) => api('PUT', path, body),
-    del: (path) => api('DELETE', path)
+    del: (path, body) => api('DELETE', path, body)
 };

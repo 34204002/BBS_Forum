@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>帖子详情</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 <div class="nav">
@@ -24,12 +25,16 @@
 <div class="container">
     <div id="post-detail"></div>
     <div class="card" id="comment-form" style="display:none">
-        <h3>发表回复</h3>
+        <h3 id="comment-form-title">发表回复</h3>
         <div class="form-group">
-            <textarea id="comment-content" rows="3" placeholder="写下你的回复..."></textarea>
+            <textarea id="comment-content" rows="3" placeholder="写下你的回复...支持 @用户名"></textarea>
         </div>
-        <button class="btn btn-primary" onclick="submitComment(null)">发布回复</button>
+        <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="comment-submit-btn" onclick="submitComment(null)">发布回复</button>
+            <button class="btn btn-outline" id="comment-cancel-btn" style="display:none" onclick="cancelEdit()">取消编辑</button>
+        </div>
         <input type="hidden" id="reply-parent-id">
+        <input type="hidden" id="edit-comment-id">
     </div>
     <h3 style="margin:20px 0 12px">回复列表</h3>
     <div id="comment-list"></div>
@@ -39,6 +44,7 @@
 <script>
 const urlParams = new URLSearchParams(location.search);
 const postId = urlParams.get('id');
+let postLiked = false, postFavorited = false, postLikeCount = 0;
 
 function updateNav() {
     if (isLoggedIn()) {
@@ -55,45 +61,105 @@ async function loadPost() {
     try {
         const res = await $.get(`/posts/${postId}`);
         const p = res.data;
+        postLiked = p.liked || false;
+        postFavorited = p.favorited || false;
+        postLikeCount = p.likeCount || 0;
         document.title = p.title;
+        const cu = getUser();
+        const isOwner = cu && cu.id === p.userId;
+        const isAdminUser = cu && cu.role === 'admin';
         document.getElementById('post-detail').innerHTML = `
             <div class="card">
-                <h2>${p.title} ${p.isTop ? '<span class="tag tag-top">置顶</span>' : ''} ${p.isEssence ? '<span class="tag tag-essence">精华</span>' : ''}</h2>
+                <h2>${escHtml(p.title)} ${p.isTop ? '<span class="tag tag-top">置顶</span>' : ''} ${p.isEssence ? '<span class="tag tag-essence">精华</span>' : ''}</h2>
                 <div class="meta" style="margin:12px 0">
-                    <span>板块: ${p.boardName}</span>
-                    <span>作者: ${p.nickname || p.username}</span>
-                    <span>👁 ${p.viewCount}</span>
-                    <span>❤ ${p.likeCount}</span>
-                    <span>💬 ${p.commentCount}</span>
+                    <span>板块: ${escHtml(p.boardName)}</span>
+                    <span>作者: ${escHtml(p.nickname || p.username)}</span>
+                    <span>👁 ${p.viewCount || 0}</span>
+                    <span id="like-count">❤ ${p.likeCount || 0}</span>
+                    <span>💬 ${p.commentCount || 0}</span>
                     <span>${p.createTime}</span>
                 </div>
-                <div style="line-height:1.8;margin-top:16px">${p.content || ''}</div>
+                <div class="markdown-body" style="margin-top:16px">${marked.parse(p.content || '')}</div>
                 <div style="margin-top:16px">
-                    ${isLoggedIn() ? `<button class="btn btn-sm btn-outline" onclick="doLike()">❤ 点赞</button>
-                    <button class="btn btn-sm btn-outline" onclick="doFavorite()">⭐ 收藏</button>` : ''}
-                    ${getUser() && (getUser().id === p.userId || getUser().role === 'admin') ?
-                        `<a href="create.html?id=${p.id}" class="btn btn-sm btn-outline">编辑</a>
-                         <button class="btn btn-sm btn-danger" onclick="doDeletePost()">删除</button>` : ''}
+                    ${isLoggedIn() ? `
+                        <button class="btn btn-sm ${postLiked ? '' : 'btn-outline'}" id="btn-like" onclick="toggleLike()">${postLiked ? '❤' : '🤍'} 点赞</button>
+                        <button class="btn btn-sm ${postFavorited ? '' : 'btn-outline'}" id="btn-fav" onclick="toggleFavorite()">${postFavorited ? '⭐' : '☆'} 收藏</button>
+                    ` : ''}
+                    ${isOwner || isAdminUser ? `
+                        <a href="create.html?id=${p.id}" class="btn btn-sm btn-outline">编辑</a>
+                        <button class="btn btn-sm btn-danger" onclick="doDeletePost()">删除</button>
+                    ` : ''}
                 </div>
             </div>`;
     } catch (e) { alert('帖子不存在'); location.href = 'index.html'; }
+}
+
+function playPulse(el) {
+    el.classList.add('pulse');
+    setTimeout(() => el.classList.remove('pulse'), 400);
+}
+
+async function toggleLike() {
+    if (!isLoggedIn()) return;
+    const btn = document.getElementById('btn-like');
+    try {
+        if (postLiked) {
+            await $.del('/likes', { targetType: 1, targetId: parseInt(postId) });
+        } else {
+            await $.post('/likes', { targetType: 1, targetId: parseInt(postId) });
+        }
+        postLiked = !postLiked;
+        postLikeCount += postLiked ? 1 : -1;
+        if (btn) {
+            btn.innerHTML = (postLiked ? '❤' : '🤍') + ' 点赞';
+            btn.className = 'btn btn-sm ' + (postLiked ? '' : 'btn-outline');
+            playPulse(btn);
+        }
+        const span = document.getElementById('like-count');
+        if (span) span.textContent = '❤ ' + postLikeCount;
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+async function toggleFavorite() {
+    if (!isLoggedIn()) return;
+    const btn = document.getElementById('btn-fav');
+    try {
+        if (postFavorited) {
+            await $.del(`/favorites/${postId}`);
+        } else {
+            await $.post('/favorites', { postId: parseInt(postId) });
+        }
+        postFavorited = !postFavorited;
+        if (btn) {
+            btn.innerHTML = (postFavorited ? '⭐' : '☆') + ' 收藏';
+            btn.className = 'btn btn-sm ' + (postFavorited ? '' : 'btn-outline');
+            playPulse(btn);
+        }
+    } catch (e) { toast(e.message, 'error'); }
 }
 
 async function loadComments() {
     try {
         const res = await $.get(`/posts/${postId}/comments?page=1&size=100`);
         const list = res.data.list || [];
-        document.getElementById('comment-list').innerHTML = list.map(c => renderComment(c)).join('');
+        document.getElementById('comment-list').innerHTML = list.length === 0
+            ? '<p style="text-align:center;color:#999;padding:20px">暂无回复</p>'
+            : list.map(c => renderComment(c)).join('');
     } catch (e) { console.error(e); }
 }
 
 function renderComment(c) {
-    let html = `<div class="comment">
-        <div class="author"><strong>${c.nickname || c.username}</strong> ${c.createTime}</div>
-        <div class="content">${c.content}</div>
+    const cu = getUser();
+    const isMine = cu && cu.id === c.userId;
+    const isAdminUser = cu && cu.role === 'admin';
+    let html = `<div class="comment" id="comment-${c.id}">
+        <div class="author"><strong>${escHtml(c.nickname || c.username)}</strong> ${c.createTime}</div>
+        <div class="content markdown-body">${marked.parse(c.content || '')}</div>
         <div class="actions">
-            ${isLoggedIn() ? `<a onclick="doLikeComment(${c.id})">❤ ${c.likeCount || 0}</a>` : ''}
-            <a onclick="replyTo(${c.id}, '${(c.nickname||c.username)}')">回复</a>
+            ${isLoggedIn() ? `<a onclick="toggleCommentLike(${c.id})">${c.isLiked ? '❤' : '🤍'} ${c.likeCount || 0}</a>` : ''}
+            ${isLoggedIn() ? `<a onclick="replyTo(${c.id}, '${escHtml(c.nickname||c.username).replace(/'/g, "\\'")}')">回复</a>` : ''}
+            ${isMine || isAdminUser ? `<a onclick="editComment(${c.id}, '${escHtml(c.content).replace(/'/g, "\\'")}')">编辑</a>` : ''}
+            ${isMine || isAdminUser ? `<a onclick="deleteComment(${c.id})" style="color:#ff4d4f">删除</a>` : ''}
         </div>`;
     if (c.children && c.children.length) {
         html += `<div class="children">${c.children.map(renderComment).join('')}</div>`;
@@ -102,30 +168,83 @@ function renderComment(c) {
     return html;
 }
 
+async function toggleCommentLike(cid) {
+    try {
+        const res = await $.get(`/likes/status?targetType=2&targetId=${cid}`);
+        if (res.data) {
+            await $.del('/likes', { targetType: 2, targetId: cid });
+        } else {
+            await $.post('/likes', { targetType: 2, targetId: cid });
+        }
+        loadComments();
+    } catch (e) { toast(e.message, 'error'); }
+}
+
 function replyTo(parentId, name) {
+    cancelEdit();
     document.getElementById('reply-parent-id').value = parentId;
     document.getElementById('comment-content').placeholder = `回复 ${name}...`;
     document.getElementById('comment-content').focus();
+}
+
+function editComment(cid, content) {
+    document.getElementById('edit-comment-id').value = cid;
+    document.getElementById('comment-content').value = content;
+    document.getElementById('reply-parent-id').value = '';
+    document.getElementById('comment-form-title').textContent = '编辑回复';
+    document.getElementById('comment-submit-btn').textContent = '保存修改';
+    document.getElementById('comment-cancel-btn').style.display = '';
+    document.getElementById('comment-content').focus();
+}
+
+function cancelEdit() {
+    document.getElementById('edit-comment-id').value = '';
+    document.getElementById('comment-content').value = '';
+    document.getElementById('reply-parent-id').value = '';
+    document.getElementById('comment-form-title').textContent = '发表回复';
+    document.getElementById('comment-submit-btn').textContent = '发布回复';
+    document.getElementById('comment-cancel-btn').style.display = 'none';
+    document.getElementById('comment-content').placeholder = '写下你的回复...支持 @用户名';
 }
 
 async function submitComment() {
     try {
         const content = document.getElementById('comment-content').value.trim();
         if (!content) return;
-        const parentId = document.getElementById('reply-parent-id').value || null;
-        await $.post('/comments', { postId: parseInt(postId), content, parentId: parentId ? parseInt(parentId) : null });
-        document.getElementById('comment-content').value = '';
-        document.getElementById('reply-parent-id').value = '';
+        const editId = document.getElementById('edit-comment-id').value;
+        if (editId) {
+            await $.put(`/comments/${editId}`, { content: content });
+            toast('修改成功');
+        } else {
+            const parentId = document.getElementById('reply-parent-id').value || null;
+            await $.post('/comments', { postId: parseInt(postId), content, parentId: parentId ? parseInt(parentId) : null });
+        }
+        cancelEdit();
         loadComments();
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, 'error'); }
 }
 
-async function doLike() { try { await $.post('/likes', { targetType: 1, targetId: parseInt(postId) }); loadPost(); } catch(e) { alert(e.message); } }
-async function doLikeComment(cid) { try { await $.post('/likes', { targetType: 2, targetId: cid }); loadComments(); } catch(e) { alert(e.message); } }
-async function doFavorite() { try { await $.post('/favorites', { postId: parseInt(postId) }); alert('已收藏'); } catch(e) { alert(e.message); } }
+async function deleteComment(cid) {
+    if (!confirm('确认删除这条回复？')) return;
+    try { await $.del(`/comments/${cid}`); loadComments(); } catch (e) { toast(e.message, 'error'); }
+}
+
 async function doDeletePost() {
     if (!confirm('确认删除？')) return;
-    try { await $.del(`/posts/${postId}`); location.href = 'index.html'; } catch(e) { alert(e.message); }
+    try { await $.del(`/posts/${postId}`); location.href = 'index.html'; } catch(e) { toast(e.message, 'error'); }
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function escHtmlWithAt(s) {
+    return escHtml(s).replace(/@([a-zA-Z0-9_一-龥]+)/g, '<span class="at-mention">@$1</span>');
+}
+
+function toast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + (type || 'success');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
 }
 
 updateNav();

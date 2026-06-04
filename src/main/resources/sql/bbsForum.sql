@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS `user`
     `points`          INT          NOT NULL DEFAULT 100 COMMENT '用户积分（注册默认100）',
     `last_login_time` DATETIME              DEFAULT NULL COMMENT '最后登录时间',
     `login_count`     INT          NOT NULL DEFAULT 0 COMMENT '登录次数',
+    `nickname`        VARCHAR(50)           DEFAULT NULL COMMENT '昵称',
+    `avatar`          VARCHAR(255)          DEFAULT NULL COMMENT '头像URL',
     `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `is_deleted`      TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',

@@ -13,69 +13,168 @@
 </div>
 
 <div class="container" style="max-width:1000px;margin:20px auto">
-    <div class="card"><h3>用户管理</h3><div id="user-table"></div></div>
-    <div class="card"><h3>板块管理</h3>
-        <div class="form-group" style="display:flex;gap:10px;align-items:flex-end">
-            <div style="flex:1"><label>名称</label><input id="b-name"></div>
-            <div style="flex:2"><label>描述</label><input id="b-desc"></div>
-            <div style="width:80px"><label>排序</label><input id="b-sort" type="number" value="1"></div>
-            <button class="btn btn-primary" onclick="addBoard()">新增</button>
-        </div>
-        <div id="board-table"></div>
+
+    <div class="tabs" style="margin-bottom:16px">
+        <span class="tab active" onclick="switchTab('users')">用户管理</span>
+        <span class="tab" onclick="switchTab('boards')">板块管理</span>
+        <span class="tab" onclick="switchTab('posts')">帖子管理</span>
+        <span class="tab" onclick="switchTab('logs')">系统日志</span>
     </div>
+
+    <div id="tab-content"></div>
 </div>
 
 <script src="js/api.js"></script>
 <script>
 if (!isLoggedIn() || !isAdmin()) { alert('需要管理员权限'); location.href = 'index.html'; }
 
-async function loadUsers() {
-    const res = await $.get('/admin/users?size=50');
-    const users = res.data.list || [];
-    document.getElementById('user-table').innerHTML = `
-        <table><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>积分</th><th>操作</th></tr>
-            ${users.map(u => `<tr>
-                <td>${u.id}</td><td>${u.username}</td><td>${u.email}</td><td>${u.role}</td>
-                <td>${u.status === 1 ? '✅正常' : '🚫禁用'}</td><td>${u.points}</td>
-                <td><button class="btn btn-sm ${u.status===1?'btn-danger':'btn-primary'}" onclick="toggleUser(${u.id}, ${u.status})">
-                    ${u.status === 1 ? '禁用' : '启用'}</button></td>
-            </tr>`).join('')}</table>`;
+let currentTab = 'users';
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    switch (tab) {
+        case 'users': renderUsers(); break;
+        case 'boards': renderBoards(); break;
+        case 'posts': renderPostManage(); break;
+        case 'logs': renderLogs(); break;
+    }
 }
 
-async function loadBoards() {
-    const res = await $.get('/boards');
-    const boards = res.data || [];
-    document.getElementById('board-table').innerHTML = `
-        <table><tr><th>ID</th><th>名称</th><th>描述</th><th>排序</th><th>帖子数</th><th>操作</th></tr>
-            ${boards.map(b => `<tr>
-                <td>${b.id}</td><td>${b.name}</td><td>${b.description || ''}</td>
-                <td>${b.sort}</td><td>${b.postCount}</td>
-                <td><button class="btn btn-sm btn-danger" onclick="deleteBoard(${b.id})">删除</button></td>
-            </tr>`).join('')}</table>`;
+// ---- 用户管理 ----
+async function renderUsers() {
+    try {
+        const res = await $.get('/admin/users?size=50');
+        const users = res.data.list || [];
+        document.getElementById('tab-content').innerHTML = `<div class="card"><h3>用户管理</h3>
+            <table><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>积分</th><th>操作</th></tr>
+            ${users.map(u => `<tr>
+                <td>${u.id}</td><td>${escHtml(u.username)}</td><td>${escHtml(u.email)}</td><td>${u.role}</td>
+                <td>${u.status===1?'✅正常':'🚫禁用'}</td><td>${u.points}</td>
+                <td><button class="btn btn-sm ${u.status===1?'btn-danger':'btn-primary'}" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button></td>
+            </tr>`).join('')}</table></div>`;
+    } catch (e) { toast(e.message, 'error'); }
 }
 
 async function toggleUser(id, curStatus) {
-    try { await $.put(`/admin/users/${id}/status`, { status: curStatus === 1 ? 0 : 1 }); loadUsers(); } catch(e) { alert(e.message); }
+    try { await $.put(`/admin/users/${id}/status`, { status: curStatus === 1 ? 0 : 1 }); renderUsers(); } catch(e) { toast(e.message, 'error'); }
+}
+
+// ---- 板块管理 ----
+async function renderBoards() {
+    try {
+        const res = await $.get('/boards');
+        const boards = res.data || [];
+        document.getElementById('tab-content').innerHTML = `<div class="card"><h3>板块管理</h3>
+            <div class="form-inline" style="margin-bottom:16px">
+                <input id="b-name" placeholder="名称" style="flex:1">
+                <input id="b-desc" placeholder="描述" style="flex:2">
+                <input id="b-sort" type="number" value="1" placeholder="排序" style="width:70px">
+                <button class="btn btn-primary" onclick="addBoard()">新增</button>
+            </div>
+            <input type="hidden" id="b-edit-id">
+            <table><tr><th>ID</th><th>名称</th><th>描述</th><th>排序</th><th>帖子数</th><th>操作</th></tr>
+            ${boards.map(b => `<tr>
+                <td>${b.id}</td><td>${escHtml(b.name)}</td><td>${escHtml(b.description||'')}</td>
+                <td>${b.sort}</td><td>${b.postCount}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline" onclick="editBoard(${b.id},'${escHtml(b.name).replace(/'/g,"\\'")}','${escHtml(b.description||'').replace(/'/g,"\\'")}',${b.sort})">编辑</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteBoard(${b.id})">删除</button>
+                </td>
+            </tr>`).join('')}</table></div>`;
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+function editBoard(id, name, desc, sort) {
+    document.getElementById('b-edit-id').value = id;
+    document.getElementById('b-name').value = name;
+    document.getElementById('b-desc').value = desc;
+    document.getElementById('b-sort').value = sort;
 }
 
 async function addBoard() {
     try {
-        await $.post('/admin/boards', {
+        const editId = document.getElementById('b-edit-id').value;
+        const body = {
             name: document.getElementById('b-name').value,
             description: document.getElementById('b-desc').value,
-            sort: parseInt(document.getElementById('b-sort').value)
-        });
-        document.getElementById('b-name').value = ''; document.getElementById('b-desc').value = ''; loadBoards();
-    } catch(e) { alert(e.message); }
+            sort: parseInt(document.getElementById('b-sort').value) || 0
+        };
+        if (editId) {
+            await $.put(`/admin/boards/${editId}`, body);
+            document.getElementById('b-edit-id').value = '';
+        } else {
+            await $.post('/admin/boards', body);
+        }
+        document.getElementById('b-name').value = '';
+        document.getElementById('b-desc').value = '';
+        document.getElementById('b-sort').value = '1';
+        renderBoards();
+    } catch(e) { toast(e.message, 'error'); }
 }
 
 async function deleteBoard(id) {
     if (!confirm('确认删除？')) return;
-    try { await $.del(`/admin/boards/${id}`); loadBoards(); } catch(e) { alert(e.message); }
+    try { await $.del(`/admin/boards/${id}`); renderBoards(); } catch(e) { toast(e.message, 'error'); }
 }
 
-loadUsers();
-loadBoards();
+// ---- 帖子管理 ----
+async function renderPostManage() {
+    try {
+        const res = await $.get('/posts?size=30');
+        const posts = res.data.list || [];
+        document.getElementById('tab-content').innerHTML = `<div class="card"><h3>帖子管理（置顶/加精）</h3>
+            <table><tr><th>ID</th><th>标题</th><th>作者</th><th>置顶</th><th>加精</th><th>操作</th></tr>
+            ${posts.map(p => `<tr>
+                <td>${p.id}</td><td><a href="post.html?id=${p.id}">${escHtml(p.title)}</a></td>
+                <td>${escHtml(p.nickname||p.username)}</td>
+                <td>${p.isTop?'✅':'—'}</td><td>${p.isEssence?'✅':'—'}</td>
+                <td>
+                    <button class="btn btn-sm ${p.isTop?'btn-outline':'btn-primary'}" onclick="togglePostTop(${p.id},${p.isTop?0:1})">${p.isTop?'取消置顶':'置顶'}</button>
+                    <button class="btn btn-sm ${p.isEssence?'btn-outline':'btn-primary'}" onclick="togglePostEssence(${p.id},${p.isEssence?0:1})">${p.isEssence?'取消加精':'加精'}</button>
+                    <button class="btn btn-sm btn-danger" onclick="deletePostAdmin(${p.id})">删除</button>
+                </td>
+            </tr>`).join('')}</table></div>`;
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+async function togglePostTop(id, val) {
+    try { await $.put(`/admin/posts/${id}/top`, { isTop: val }); renderPostManage(); } catch(e) { toast(e.message, 'error'); }
+}
+async function togglePostEssence(id, val) {
+    try { await $.put(`/admin/posts/${id}/essence`, { isEssence: val }); renderPostManage(); } catch(e) { toast(e.message, 'error'); }
+}
+async function deletePostAdmin(id) {
+    if (!confirm('确认删除这条帖子？')) return;
+    try { await $.del(`/posts/${id}`); renderPostManage(); } catch(e) { toast(e.message, 'error'); }
+}
+
+// ---- 系统日志 ----
+async function renderLogs() {
+    try {
+        const res = await $.get('/admin/logs?size=50');
+        const logs = res.data.list || [];
+        document.getElementById('tab-content').innerHTML = `<div class="card"><h3>系统操作日志</h3>
+            ${logs.length === 0 ? '<p style="text-align:center;color:#999;padding:30px">暂无日志</p>' :
+            `<table><tr><th>ID</th><th>管理员ID</th><th>操作</th><th>IP</th><th>时间</th></tr>
+            ${logs.map(l => `<tr>
+                <td>${l.id}</td><td>${l.adminId}</td><td>${escHtml(l.operation)}</td>
+                <td>${l.ip}</td><td>${l.createTime}</td>
+            </tr>`).join('')}</table>`}</div>`;
+    } catch (e) { toast(e.message, 'error'); }
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function toast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + (type || 'success');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+}
+
+switchTab('users');
 </script>
 </body>
 </html>

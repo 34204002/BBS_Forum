@@ -23,7 +23,17 @@
 </div>
 
 <div class="container">
+    <div class="search-bar">
+        <input id="keyword-input" type="text" placeholder="搜索帖子标题..." onkeydown="if(event.key==='Enter')searchPosts()">
+        <button class="btn btn-primary" onclick="searchPosts()">搜索</button>
+        <a href="index.html?tab=hot" class="btn btn-outline" style="margin-left:8px">热门</a>
+    </div>
     <div id="board-list" class="board-list"></div>
+    <div class="sort-tabs">
+        <span class="sort-tab active" onclick="switchSort('createTime', this)">最新</span>
+        <span class="sort-tab" onclick="switchSort('likeCount', this)">最多点赞</span>
+        <span class="sort-tab" onclick="switchSort('commentCount', this)">最多回复</span>
+    </div>
     <div id="post-list"></div>
     <div id="pagination" class="pagination"></div>
 </div>
@@ -33,6 +43,7 @@
 let currentBoardId = null;
 let currentPage = 1;
 let currentOrder = 'createTime';
+let currentKeyword = '';
 
 function updateNav() {
     if (isLoggedIn()) {
@@ -51,8 +62,8 @@ async function loadBoards() {
         const res = await $.get('/boards');
         const boards = res.data || [];
         const div = document.getElementById('board-list');
-        div.innerHTML = '<span class="board-tag active" onclick="selectBoard(null)">全部</span>' +
-            boards.map(b => `<span class="board-tag" onclick="selectBoard(${b.id})">${b.name}</span>`).join('');
+        div.innerHTML = '<span class="board-tag ' + (!currentBoardId ? 'active' : '') + '" onclick="selectBoard(null)">全部</span>' +
+            boards.map(b => `<span class="board-tag ${currentBoardId===b.id?'active':''}" onclick="selectBoard(${b.id})">${b.name}</span>`).join('');
     } catch (e) { console.error(e); }
 }
 
@@ -60,47 +71,77 @@ async function loadPosts() {
     try {
         let params = `page=${currentPage}&size=10&orderBy=${currentOrder}`;
         if (currentBoardId) params += `&boardId=${currentBoardId}`;
+        if (currentKeyword) params += `&keyword=${encodeURIComponent(currentKeyword)}`;
         const res = await $.get(`/posts?${params}`);
         const data = res.data;
         const div = document.getElementById('post-list');
-        div.innerHTML = (data.list || []).map(p => `
+        const list = data.list || [];
+        if (list.length === 0) {
+            div.innerHTML = '<p style="text-align:center;color:#999;padding:40px">暂无帖子</p>';
+            document.getElementById('pagination').innerHTML = '';
+            return;
+        }
+        div.innerHTML = list.map(p => `
             <div class="post-item" onclick="location.href='post.html?id=${p.id}'">
                 <div style="flex:1">
                     <div style="font-size:15px;font-weight:500">
                         ${p.isTop ? '<span class="tag tag-top">置顶</span>' : ''}
                         ${p.isEssence ? '<span class="tag tag-essence">精华</span>' : ''}
                         ${p.isDemand ? '<span class="tag tag-demand">需求</span>' : ''}
-                        ${p.title}
+                        ${escHtml(p.title)}
                     </div>
                     <div class="meta">
-                        <span>${p.boardName || ''}</span>
-                        <span>👤 ${p.nickname || p.username}</span>
-                        <span>👁 ${p.viewCount}</span>
-                        <span>❤ ${p.likeCount}</span>
-                        <span>💬 ${p.commentCount}</span>
+                        <span>${escHtml(p.boardName || '')}</span>
+                        <span>👤 ${escHtml(p.nickname || p.username)}</span>
+                        <span>👁 ${p.viewCount || 0}</span>
+                        <span>❤ ${p.likeCount || 0}</span>
+                        <span>💬 ${p.commentCount || 0}</span>
                         <span>${p.createTime}</span>
                     </div>
                 </div>
-            </div>`).join('') || '<p style="text-align:center;color:#999;padding:40px">暂无帖子</p>';
+            </div>`).join('');
 
         const pg = document.getElementById('pagination');
         let html = '';
-        for (let i = 1; i <= data.pages; i++) {
-            html += `<button ${i === currentPage ? 'class="active"' : ''} onclick="goPage(${i})">${i}</button>`;
+        if (data.pages > 1) {
+            html += `<button ${currentPage===1?'disabled':''} onclick="goPage(${currentPage-1})">上一页</button>`;
+            for (let i = 1; i <= data.pages; i++) {
+                html += `<button ${i===currentPage?'class="active"':''} onclick="goPage(${i})">${i}</button>`;
+            }
+            html += `<button ${currentPage===data.pages?'disabled':''} onclick="goPage(${currentPage+1})">下一页</button>`;
         }
         pg.innerHTML = html;
     } catch (e) { console.error(e); }
 }
 
+function searchPosts() {
+    currentKeyword = document.getElementById('keyword-input').value.trim();
+    currentPage = 1;
+    loadPosts();
+}
+
+function switchSort(order, el) {
+    currentOrder = order;
+    currentPage = 1;
+    document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    loadPosts();
+}
+
 function selectBoard(id) {
     currentBoardId = id;
     currentPage = 1;
-    document.querySelectorAll('.board-tag').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
+    loadBoards();
     loadPosts();
 }
 
 function goPage(p) { currentPage = p; loadPosts(); window.scrollTo(0, 0); }
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// 支持 ?tab=hot
+if (new URLSearchParams(location.search).get('tab') === 'hot') {
+    currentOrder = 'likeCount';
+}
 
 updateNav();
 loadBoards();

@@ -1,6 +1,7 @@
 package com.jiang.bbs_forum.service.user.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jiang.bbs_forum.common.PageResponse;
@@ -347,8 +348,10 @@ public class CommentServiceImpl implements CommentService {
 
         deleteCommentRecursively(commentId);
 
-        comment.setIsDeleted(1);
-        commentMapper.updateById(comment);
+        commentMapper.update(null,
+                new UpdateWrapper<Comment>()
+                        .eq("id", commentId)
+                        .set("is_deleted", 1));
 
         Post post = postMapper.selectById(comment.getPostId());
         if (post != null) {
@@ -374,8 +377,10 @@ public class CommentServiceImpl implements CommentService {
 
         for (Comment child : children) {
             deleteCommentRecursively(child.getId());
-            child.setIsDeleted(1);
-            commentMapper.updateById(child);
+            commentMapper.update(null,
+                    new UpdateWrapper<Comment>()
+                            .eq("id", child.getId())
+                            .set("is_deleted", 1));
         }
     }
 
