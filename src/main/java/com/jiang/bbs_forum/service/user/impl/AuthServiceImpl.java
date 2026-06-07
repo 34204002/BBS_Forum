@@ -101,8 +101,11 @@ public class AuthServiceImpl implements AuthService {
         query.eq(User::getUsername, request.getUsername());
         User user = userMapper.selectOne(query);
 
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return Response.error(400, "用户名或密码错误");
+        if (user == null) {
+            return Response.error(400, "用户名不存在");
+        }
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return Response.error(400, "密码错误");
         }
         if (user.getStatus() == 0) {
             return Response.error(400, "账号已被禁用");

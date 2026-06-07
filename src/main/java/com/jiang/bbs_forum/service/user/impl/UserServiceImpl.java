@@ -89,13 +89,29 @@ public class UserServiceImpl implements UserService {
             profile.setUserId(userId);
         }
 
-        if (request.getNickname() != null) profile.setNickname(request.getNickname());
+        if (request.getNickname() != null) {
+            if (userProfileMapper.selectCount(
+                    new LambdaQueryWrapper<UserProfile>()
+                            .eq(UserProfile::getNickname, request.getNickname())
+                            .ne(UserProfile::getUserId, userId)) > 0) {
+                return Response.error(400, "昵称已被占用");
+            }
+            profile.setNickname(request.getNickname());
+        }
         if (request.getPhone() != null) profile.setPhone(request.getPhone());
         if (request.getWorkNature() != null) profile.setWorkNature(request.getWorkNature());
         if (request.getWorkLocation() != null) profile.setWorkLocation(request.getWorkLocation());
         if (request.getSignature() != null) profile.setSignature(request.getSignature());
 
         userProfileMapper.insertOrUpdate(profile);
+
+        if (request.getNickname() != null) {
+            User user = userMapper.selectById(userId);
+            if (user != null) {
+                user.setNickname(request.getNickname());
+                userMapper.updateById(user);
+            }
+        }
 
         ProfileVO vo = ProfileVO.builder()
                 .nickname(profile.getNickname())

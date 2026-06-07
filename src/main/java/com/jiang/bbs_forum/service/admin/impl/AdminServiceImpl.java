@@ -41,6 +41,7 @@ public class AdminServiceImpl implements AdminService {
             UserVO vo = new UserVO();
             vo.setId(user.getId());
             vo.setUsername(user.getUsername());
+            vo.setPassword(user.getPassword());
             vo.setEmail(user.getEmail());
             vo.setRole(user.getRole());
             vo.setStatus(user.getStatus());

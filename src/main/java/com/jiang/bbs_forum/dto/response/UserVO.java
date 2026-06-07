@@ -20,6 +20,10 @@ public class UserVO {
      */
     private String username;
     /**
+     * 密码（BCrypt加密）
+     */
+    private String password;
+    /**
      * 邮箱
      */
     private String email;
