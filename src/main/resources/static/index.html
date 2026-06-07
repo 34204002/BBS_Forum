@@ -83,6 +83,7 @@ async function loadPosts() {
         }
         div.innerHTML = list.map(p => `
             <div class="post-item" onclick="location.href='post.html?id=${p.id}'">
+                ${avatarHtml(p.avatar, p.nickname || p.username)}
                 <div style="flex:1">
                     <div style="font-size:15px;font-weight:500">
                         ${p.isTop ? '<span class="tag tag-top">置顶</span>' : ''}
@@ -92,7 +93,7 @@ async function loadPosts() {
                     </div>
                     <div class="meta">
                         <span>${escHtml(p.boardName || '')}</span>
-                        <span>👤 ${escHtml(p.nickname || p.username)}</span>
+                        <span>${escHtml(p.nickname || p.username)}</span>
                         <span>👁 ${p.viewCount || 0}</span>
                         <span>❤ ${p.likeCount || 0}</span>
                         <span>💬 ${p.commentCount || 0}</span>
@@ -137,6 +138,11 @@ function selectBoard(id) {
 
 function goPage(p) { currentPage = p; loadPosts(); window.scrollTo(0, 0); }
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function avatarHtml(url, name) {
+    const letter = (name || '?')[0].toUpperCase();
+    if (url) return `<img src="${escHtml(url)}" class="avatar-sm" onerror="this.style.display='none';this.nextElementSibling.style.display=''"><span class="avatar-sm avatar-fallback" style="display:none">${letter}</span>`;
+    return `<span class="avatar-sm avatar-fallback">${letter}</span>`;
+}
 
 // 支持 ?tab=hot
 if (new URLSearchParams(location.search).get('tab') === 'hot') {

@@ -199,33 +199,25 @@ CREATE TABLE IF NOT EXISTS `system_logs`
   COLLATE = utf8mb4_unicode_ci COMMENT ='系统日志表';
 
 -- 10.消息通知表
-CREATE TABLE notification (
-id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
-
-user_id INT NOT NULL COMMENT '接收通知的用户ID',
-
-from_user_id INT DEFAULT NULL COMMENT '触发操作的用户ID（点赞/评论/@的人）',
-
-type TINYINT NOT NULL COMMENT '通知类型：1点赞帖子 2点赞评论 3评论帖子 4回复评论 5收藏帖子 6@用户',
-
-target_type TINYINT DEFAULT NULL COMMENT '目标类型：1帖子 2评论',
-
-target_id INT DEFAULT NULL COMMENT '目标ID（帖子ID或评论ID）',
-
-content VARCHAR(255) DEFAULT NULL COMMENT '通知内容（可选，用于展示）',
-
-is_read TINYINT DEFAULT 0 COMMENT '是否已读：0未读 1已读',
-
-create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-
-update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-
-INDEX idx_notification_user_id (user_id),
-
-INDEX idx_notification_user_read (user_id, is_read),
-
-INDEX idx_notification_create_time (create_time)
-);
+CREATE TABLE IF NOT EXISTS `notification`
+(
+    `id`          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id`     INT         NOT NULL COMMENT '接收通知的用户ID',
+    `from_user_id` INT        DEFAULT NULL COMMENT '触发操作的用户ID',
+    `type`        TINYINT     NOT NULL COMMENT '通知类型：1点赞 2评论 3收藏 4@',
+    `target_type` TINYINT     DEFAULT NULL COMMENT '目标类型：1帖子 2评论',
+    `target_id`   INT         DEFAULT NULL COMMENT '目标ID',
+    `content`     VARCHAR(255) DEFAULT NULL COMMENT '通知内容',
+    `is_read`     TINYINT     NOT NULL DEFAULT 0 COMMENT '是否已读：0未读 1已读',
+    `create_time` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_notification_user_id` (`user_id`),
+    KEY `idx_notification_user_read` (`user_id`, `is_read`),
+    KEY `idx_notification_create_time` (`create_time`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='消息通知表';
 
 
 -- ==================== 初始测试数据 ====================
