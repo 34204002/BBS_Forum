@@ -14,6 +14,7 @@ import com.jiang.bbs_forum.mapper.SystemLogMapper;
 import com.jiang.bbs_forum.mapper.UserMapper;
 import com.jiang.bbs_forum.service.admin.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,6 +27,8 @@ public class AdminServiceImpl implements AdminService {
     private UserMapper userMapper;
     @Autowired
     private SystemLogMapper systemLogMapper;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public Response<PageResponse<UserVO>> listUsers(String keyword, int page, int size) {
@@ -92,5 +95,19 @@ public class AdminServiceImpl implements AdminService {
         long total = logPage.getTotal();
         int pages = (int) Math.ceil((double) total / size);
         return Response.success(new PageResponse<>(total, voList, page, size, pages));
+    }
+
+    @Override
+    public Response<Void> resetPassword(int userId, String newPassword) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return Response.error(404, "用户不存在");
+        }
+        if (newPassword == null || newPassword.length() < 3) {
+            return Response.error(400, "密码至少3位");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+        return Response.success("密码重置成功", null);
     }
 }

@@ -12,4 +12,6 @@ public interface AdminService {
     Response<StatusVO> updateUserStatus(int userId, int status);
 
     Response<PageResponse<LogVO>> getSystemLogs(int page, int size);
+
+    Response<Void> resetPassword(int userId, String newPassword);
 }

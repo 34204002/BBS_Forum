@@ -54,6 +54,17 @@ public class AdminController {
         return adminService.updateUserStatus(userId, request.getStatus());
     }
 
+    /**
+     * 重置用户密码（管理员）
+     */
+    @PutMapping("/users/{id}/password")
+    public Response<Void> resetPassword(
+            @PathVariable("id") int userId,
+            @RequestParam String newPassword) {
+        log.info("PUT /api/admin/users/{}/password - 重置密码", userId);
+        return adminService.resetPassword(userId, newPassword);
+    }
+
     // ==================== 板块管理 ====================
 
     /**

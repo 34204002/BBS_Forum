@@ -59,6 +59,9 @@ public class PostServiceImpl implements PostService {
             wrapper.like(Post::getTitle, keyword);
         }
 
+        wrapper.orderByDesc(Post::getIsTop)
+              .orderByDesc(Post::getIsEssence);
+
         switch (orderBy) {
             case "likeCount" -> wrapper.orderByDesc(Post::getLikeCount);
             case "commentCount" -> wrapper.orderByDesc(Post::getCommentCount);

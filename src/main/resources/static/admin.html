@@ -48,18 +48,29 @@ async function renderUsers() {
         const res = await $.get('/admin/users?size=50');
         const users = res.data.list || [];
         document.getElementById('tab-content').innerHTML = `<div class="card"><h3>用户管理</h3>
-            <table><tr><th>ID</th><th>用户名</th><th>密码(BCrypt)</th><th>邮箱</th><th>角色</th><th>状态</th><th>积分</th><th>操作</th></tr>
+            <table><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>积分</th><th>操作</th></tr>
             ${users.map(u => `<tr>
-                <td>${u.id}</td><td>${escHtml(u.username)}</td><td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(u.password||'')}">${escHtml((u.password||'').substring(0, 20))}...</td>
-                <td>${escHtml(u.email)}</td><td>${u.role}</td>
+                <td>${u.id}</td><td>${escHtml(u.username)}</td><td>${escHtml(u.email)}</td><td>${u.role}</td>
                 <td>${u.status===1?'✅正常':'🚫禁用'}</td><td>${u.points}</td>
-                <td><button class="btn btn-sm ${u.status===1?'btn-danger':'btn-primary'}" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button></td>
+                <td>
+                    <button class="btn btn-sm ${u.status===1?'btn-danger':'btn-primary'}" onclick="toggleUser(${u.id},${u.status})">${u.status===1?'禁用':'启用'}</button>
+                    <button class="btn btn-sm btn-outline" onclick="resetPassword(${u.id})">重置密码</button>
+                </td>
             </tr>`).join('')}</table></div>`;
     } catch (e) { toast(e.message, 'error'); }
 }
 
 async function toggleUser(id, curStatus) {
     try { await $.put(`/admin/users/${id}/status`, { status: curStatus === 1 ? 0 : 1 }); renderUsers(); } catch(e) { toast(e.message, 'error'); }
+}
+
+async function resetPassword(id) {
+    const pwd = prompt('请输入新密码（至少3位）：');
+    if (!pwd) return;
+    try {
+        await $.put(`/admin/users/${id}/password?newPassword=${encodeURIComponent(pwd)}`);
+        toast('密码重置成功');
+    } catch(e) { toast(e.message, 'error'); }
 }
 
 // ---- 板块管理 ----
