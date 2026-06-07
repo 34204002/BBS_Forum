@@ -26,6 +26,11 @@
         <div class="form-group">
             <label>内容（支持 Markdown）</label>
             <textarea id="post-content" rows="10" placeholder="请输入内容...&#10;&#10;Markdown 语法提示：&#10;# 标题  ## 二级标题&#10;**粗体**  *斜体*  `代码`&#10;- 列表项&#10;[链接](url)  ![图片](url)&#10;```代码块```"></textarea>
+            <div style="margin-top:8px">
+                <input type="file" id="image-file" accept="image/*" style="display:none" onchange="uploadImage()">
+                <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('image-file').click()">📷 插入图片</button>
+                <span id="upload-tip" style="font-size:12px;color:#999;margin-left:8px;display:none">上传中...</span>
+            </div>
         </div>
         <div class="form-group">
             <label><input type="checkbox" id="is-demand" onchange="toggleDemand()"> 发布需求帖</label>
@@ -59,6 +64,32 @@ async function init() {
 
 function toggleDemand() {
     document.getElementById('demand-box').style.display = document.getElementById('is-demand').checked ? 'block' : 'none';
+}
+
+async function uploadImage() {
+    const file = document.getElementById('image-file').files[0];
+    if (!file) return;
+    const tip = document.getElementById('upload-tip');
+    tip.style.display = '';
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload/post', {
+            method: 'POST',
+            headers: { 'Authorization': getToken() },
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '上传失败');
+        const ta = document.getElementById('post-content');
+        const mdImg = `\n![${file.name}](${data.data.url})\n`;
+        ta.value = ta.value + mdImg;
+        tip.style.display = 'none';
+        document.getElementById('image-file').value = '';
+    } catch (e) {
+        tip.style.display = 'none';
+        alert(e.message);
+    }
 }
 
 async function submitPost() {

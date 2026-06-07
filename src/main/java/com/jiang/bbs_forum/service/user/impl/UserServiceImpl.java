@@ -124,9 +124,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Response<Void> updateAvatar(int userId, String avatarUrl) {
-        // TODO: 1. 更新 user 表的 avatar 字段
-        // TODO: 2. 同步更新 user_profile 表的 avatar 字段
-        return null;
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return Response.error(404, "用户不存在");
+        }
+        user.setAvatar(avatarUrl);
+        userMapper.updateById(user);
+
+        UserProfile profile = userProfileMapper.selectOne(
+                new LambdaQueryWrapper<UserProfile>().eq(UserProfile::getUserId, userId));
+        if (profile == null) {
+            profile = new UserProfile();
+            profile.setUserId(userId);
+        }
+        profile.setAvatar(avatarUrl);
+        userProfileMapper.insertOrUpdate(profile);
+
+        return Response.success("头像更新成功", null);
     }
 
     private ProfileVO buildProfile(UserProfile p) {

@@ -50,13 +50,23 @@ if (!isLoggedIn()) { location.href = 'login.html'; }
 let currentTab = 'info';
 document.getElementById('nav-user').textContent = getUser()?.nickname || getUser()?.username || '';
 
+function renderAvatar(u) {
+    const el = document.getElementById('profile-avatar');
+    const avatarUrl = (u.profile && u.profile.avatar) ? u.profile.avatar : u.avatar;
+    if (avatarUrl) {
+        el.innerHTML = `<img src="${avatarUrl}" style="width:56px;height:56px;border-radius:50%;object-fit:cover">`;
+    } else {
+        el.textContent = (u.nickname || u.username || '?')[0].toUpperCase();
+    }
+}
+
 async function init() {
     const res = await $.get('/users/current');
     const u = res.data;
     document.getElementById('profile-name').textContent = u.nickname || u.username;
     document.getElementById('profile-points').textContent = u.points || 0;
     document.getElementById('profile-logins').textContent = u.loginCount || 0;
-    document.getElementById('profile-avatar').textContent = (u.nickname || u.username)[0].toUpperCase();
+    renderAvatar(u);
     switchTab('info');
 }
 
@@ -83,7 +93,7 @@ async function renderProfile() {
         const u = res.data;
         const p = u.profile || {};
         document.getElementById('profile-name').textContent = u.nickname || u.username;
-        document.getElementById('profile-avatar').textContent = (u.nickname || u.username)[0].toUpperCase();
+        renderAvatar(u);
         document.getElementById('profile-points').textContent = u.points || 0;
         document.getElementById('profile-logins').textContent = u.loginCount || 0;
         document.getElementById('tab-content').innerHTML = `
@@ -96,8 +106,20 @@ async function renderProfile() {
                 <button class="btn btn-primary" onclick="saveProfile()">保存</button>
             </div>
             <div class="card"><h3>修改头像</h3>
-                <div class="form-group"><label>头像URL</label><input id="p-avatar-url" value="${escHtml(p.avatar||'')}" placeholder="输入头像图片URL"></div>
-                <button class="btn btn-primary" onclick="updateAvatar()">更新头像</button>
+                <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+                    <div style="flex:1;min-width:200px">
+                        <div class="form-group"><label>上传头像文件</label>
+                            <input type="file" id="p-avatar-file" accept="image/*" onchange="uploadAvatarFile()">
+                        </div>
+                        <span id="avatar-upload-tip" style="font-size:12px;color:#999;display:none">上传中...</span>
+                    </div>
+                    <div style="flex:1;min-width:200px">
+                        <div class="form-group"><label>或输入头像URL</label>
+                            <input id="p-avatar-url" value="${escHtml(p.avatar||'')}" placeholder="https://...">
+                        </div>
+                        <button class="btn btn-primary" onclick="updateAvatar()">更新头像</button>
+                    </div>
+                </div>
             </div>
             <div class="card"><h3>修改密码</h3>
                 <div class="form-group"><label>原密码</label><input id="old-pwd" type="password"></div>
@@ -121,10 +143,33 @@ async function saveProfile() {
     } catch (e) { toast(e.message, 'error'); }
 }
 
+async function uploadAvatarFile() {
+    const file = document.getElementById('p-avatar-file').files[0];
+    if (!file) return;
+    const tip = document.getElementById('avatar-upload-tip');
+    tip.style.display = '';
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload/avatar', {
+            method: 'POST',
+            headers: { 'Authorization': getToken() },
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '上传失败');
+        document.getElementById('p-avatar-url').value = data.data.url;
+        await $.put(`/users/avatar?avatarUrl=${encodeURIComponent(data.data.url)}`);
+        toast('头像更新成功');
+        init();
+    } catch (e) { toast(e.message, 'error'); }
+    tip.style.display = 'none';
+}
+
 async function updateAvatar() {
     try {
         const url = document.getElementById('p-avatar-url').value.trim();
-        if (!url) { toast('请输入头像URL', 'error'); return; }
+        if (!url) { toast('请输入头像URL或上传文件', 'error'); return; }
         await $.put(`/users/avatar?avatarUrl=${encodeURIComponent(url)}`);
         toast('头像更新成功');
         init();
